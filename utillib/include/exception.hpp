@@ -1,0 +1,67 @@
+#pragma once
+#include <stdexcept>
+#include <system_error>
+#include "meta.hpp"
+
+namespace jab{
+namespace exception{
+
+class InvalidAddress : public std::invalid_argument{
+public:
+    using std::invalid_argument::invalid_argument;
+};
+
+class InvalidNodeName : public InvalidAddress{
+public:
+    InvalidNodeName(const std::string &addr);
+};
+
+class AddressRouteTooLong : public InvalidAddress, public std::length_error{
+public:
+    AddressRouteTooLong(const std::string &msg);
+};
+
+class IOError : public std::exception{
+public:
+    using std::exception::exception;
+    virtual const char *what() const noexcept override;
+ };
+
+//Throw this with errno set to represent an exception of the POSIX API
+class posix_exception:public std::system_error{
+public:
+    posix_exception(const std::string &);
+
+    //-1 is the usual error code for a posix call.
+    //There are probably some exceptions, though.
+    template<typename Result, typename WrapEx>
+    static inline Result check(Result result, const std::string &msg, meta::type<WrapEx> wrap, Result errcode = -1){
+        try{
+            return result == errcode ? throw posix_exception(msg) : result;
+        }
+        catch(...){
+            std::throw_with_nested( WrapEx() );
+        }
+    }
+
+    template<typename Result, typename WrapEx, typename F, typename OP = decltype( std::declval<F>().operator()() )>
+    static inline Result check(Result result, F msg_func, meta::type<WrapEx> wrap, Result errcode = -1){
+        try{
+            return result == errcode ? throw posix_exception(msg_func()) : result;
+        }
+        catch(...){
+            std::throw_with_nested( WrapEx() );
+        }
+    }
+
+    /*
+    //Lazy error message generation
+    template<typename F, typename OP = decltype( std::declval<F>().operator()() )>
+    static inline int check(int result, F msg_func, int errcode = -1){
+        return result == errcode ? throw posix_exception(msg_func()) : result;
+    }
+    */
+};
+
+}    
+}

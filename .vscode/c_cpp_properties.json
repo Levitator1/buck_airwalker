@@ -1,0 +1,25 @@
+{
+    "env": {
+      "myDefaultIncludePath": ["${workspaceFolder}", "${workspaceFolder}/include", "${workspaceFolder}/utillib/include"],
+      "myCompilerPath": "/usr/bin/gcc"
+    },
+    "configurations": [
+      {
+        "name": "Linux",
+        "intelliSenseMode": "gcc-x64",
+        "includePath": ["${myDefaultIncludePath}"],        
+        "defines": [],
+        "forcedInclude": [],
+        "compilerPath": "${myCompilerPath}",
+        "cStandard": "c11",
+        "cppStandard": "c++20",
+        //"compileCommands": "/path/to/compile_commands.json",
+        "browse": {
+          "path": ["${workspaceFolder}"],
+          "limitSymbolsToIncludedHeaders": false
+          //"databaseFilename": ""
+        }
+      }
+    ],
+    "version": 4
+  }

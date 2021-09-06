@@ -1,0 +1,19 @@
+{
+    "files.associations": {
+        "stdexcept": "cpp",
+        "atomic": "cpp",
+        "*.tcc": "cpp",
+        "memory": "cpp",
+        "iostream": "cpp",
+        "istream": "cpp",
+        "sstream": "cpp",
+        "streambuf": "cpp",
+        "typeinfo": "cpp",
+        "utility": "cpp",
+        "new": "cpp",
+        "executor": "cpp",
+        "internet": "cpp",
+        "optional": "cpp",
+        "iosfwd": "cpp"
+    }
+}
