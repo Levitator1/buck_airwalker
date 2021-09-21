@@ -1,0 +1,192 @@
+make all -f "/home/j/project/buck_air_walker/build/Makefile" -C "/home/j/project/buck_air_walker/build" --print-data-base --no-builtin-variables --no-builtin-rules --question
+# GNU Make 4.3
+# Built for x86_64-pc-linux-gnu
+# Copyright (C) 1988-2020 Free Software Foundation, Inc.
+# License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+# This is free software: you are free to change and redistribute it.
+# There is NO WARRANTY, to the extent permitted by law.
+
+# Make data base, printed on Sat Sep 11 07:12:07 2021
+
+# Variables
+
+# environment
+GDK_BACKEND = x11
+# environment
+LC_ALL = C
+# environment
+VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-792eb891-9bfc-48fa-9776-049293516017.sock
+# environment
+VSCODE_CWD = /home/j
+# default
+MAKE_COMMAND := make
+# environment
+QT_ACCESSIBILITY = 1
+# environment
+VSCODE_HANDLES_UNCAUGHT_ERRORS = true
+# default
+.VARIABLES := 
+# environment
+PWD = /home/j/project/buck_air_walker
+# environment
+XDG_DATA_DIRS = /usr/local/share:/usr/share:/usr/share/gdm:/var/lib/menu-xdg:/usr/local/share/:/usr/share/:/usr/share/gdm/:/var/lib/menu-xdg/
+# environment
+VSCODE_LOG_STACK = false
+# environment
+VSCODE_CODE_CACHE_PATH = /home/j/.config/Code/CachedData/e7d7e9a9348e6a8cc8c03f877d39cb72e5dfb1ff
+# environment
+XDG_SESSION_PATH = /org/freedesktop/DisplayManager/Session0
+# environment
+LANG = C
+# environment
+XAUTHORITY = /home/j/.Xauthority
+# default
+.LOADED := 
+# environment
+VSCODE_PIPE_LOGGING = true
+# environment
+APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL = true
+# environment
+SSH_AUTH_SOCK = /tmp/ssh-vH9Ks3NmO8lL/agent.1418
+# default
+.SHELLFLAGS := -c
+# environment
+_LXSESSION_PID = 1418
+# environment
+XDG_CONFIG_DIRS = /etc/xdg
+# environment
+VSCODE_CRASH_REPORTER_START_OPTIONS = {"companyName":"Microsoft","productName":"VSCode","submitURL":"appcenter://code?aid=fba07a4d-84bd-4fc8-a125-9640fc8ce171&uid=b9a2287a-c033-4d95-a3ba-45c9481f2d54&iid=b9a2287a-c033-4d95-a3ba-45c9481f2d54&sid=b9a2287a-c033-4d95-a3ba-45c9481f2d54","uploadToServer":true}
+# environment
+XDG_SESSION_DESKTOP = lightdm-xsession
+# environment
+VSCODE_VERBOSE_LOGGING = true
+# environment
+VSCODE_PID = 2024
+# environment
+XDG_SESSION_TYPE = x11
+# environment
+SAL_USE_VCLPLUGIN = gtk
+# environment
+XDG_DATA_HOME = /home/j/.local/share
+# environment
+CHROME_DESKTOP = code-url-handler.desktop
+# environment
+DBUS_SESSION_BUS_ADDRESS = unix:path=/run/user/1000/bus
+# environment
+VSCODE_NLS_CONFIG = {"locale":"en-us","availableLanguages":{},"_languagePackSupport":true}
+# environment
+BREAKPAD_DUMP_LOCATION = /home/j/.config/Code/exthost Crash Reports
+# environment
+SHELL = /bin/bash
+# default
+MAKECMDGOALS := all
+# environment
+SHLVL = 0
+# default
+MAKE = $(MAKE_COMMAND)
+# environment
+PATH = /home/j/.local/bin:/home/j/arm-tools/bin:/home/j/.local/bin:/home/j/.local/bin:/home/j/arm-tools/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games
+# environment
+XDG_CONFIG_HOME = /home/j/.config
+# environment
+VSCODE_LOG_NATIVE = false
+# environment
+XDG_SEAT = seat0
+# environment
+XDG_CURRENT_DESKTOP = LXDE
+# environment
+LS_COLORS = 
+# environment
+XDG_SEAT_PATH = /org/freedesktop/DisplayManager/Seat0
+# environment
+DESKTOP_SESSION = LXDE
+# environment
+ORIGINAL_XDG_CURRENT_DESKTOP = LXDE
+# environment
+GNUMAKEFLAGS := 
+# environment
+LOGNAME = j
+# environment
+XDG_VTNR = 7
+# environment
+DISPLAY = :0
+# environment
+USER = j
+# environment
+GTK_MODULES = gail:atk-bridge
+# environment
+SSH_AGENT_PID = 1512
+# environment
+_ = /usr/share/code/code
+# environment
+XDG_RUNTIME_DIR = /run/user/1000
+# environment
+GPG_AGENT_INFO = /run/user/1000/gnupg/S.gpg-agent:0:1
+# environment
+XDG_SESSION_CLASS = user
+# environment
+VSCODE_AMD_ENTRYPOINT = vs/workbench/services/extensions/node/extensionHostProcess
+# environment
+HOME = /home/j
+# environment
+ELECTRON_RUN_AS_NODE = 1
+# environment
+VSCODE_IPC_HOOK = /run/user/1000/vscode-d21a3b6f-1.60.0-main.sock
+# environment
+MATHEMATICA_HOME = /opt/Wolfram/WolframEngine/12.3
+# environment
+XDG_SESSION_ID = 2
+# default
+.RECIPEPREFIX := 
+# environment
+XDG_GREETER_DATA_DIR = /var/lib/lightdm/data/j
+# default
+.FEATURES := target-specific order-only second-expansion else-if shortest-stem undefine oneshell nocomment grouped-target extra-prereqs archives jobserver output-sync check-symlink load
+# environment
+XDG_MENU_PREFIX = lxde-
+# environment
+GDMSESSION = lightdm-xsession
+# variable set hash-table stats:
+# Load=68/1024=7%, Rehash=0, Collisions=5/72=7%
+
+# Pattern-specific Variable Values
+
+# No pattern-specific variable values.
+
+# Directories
+
+
+# No files, no impossibilities in 0 directories.
+
+# Implicit Rules
+
+# No implicit rules.
+
+# Files
+
+# Not a target:
+all:
+#  Command line target.
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# files hash-table stats:
+# Load=1/1024=0%, Rehash=0, Collisions=0/1=0%
+# VPATH Search Paths
+
+# No 'vpath' search paths.
+
+# No general ('VPATH' variable) search path.
+
+# strcache buffers: 1 (0) / strings = 3 / storage = 89 B / avg = 29 B
+# current buf: size = 8162 B / used = 89 B / count = 3 / avg = 29 B
+
+# strcache performance: lookups = 4 / hit rate = 25%
+# hash-table stats:
+# Load=3/8192=0%, Rehash=0, Collisions=0/4=0%
+# Finished Make data base on Sat Sep 11 07:12:07 2021
+
+ 
+make: *** /home/j/project/buck_air_walker/build: No such file or directory.  Stop.
+ 

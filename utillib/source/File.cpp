@@ -13,7 +13,9 @@ using namespace jab::exception;
 using namespace std::string_literals;
 using namespace jab::file;
 
-File::File(){}
+const File null_file = {};
+
+jab::file::File::File(){}
 File::File(fd_t fd):m_state{fd}{}
 
 //TODO: Log a warning if a file doesn't close, since we shouldn't throw here

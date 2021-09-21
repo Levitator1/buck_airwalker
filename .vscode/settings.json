@@ -15,5 +15,8 @@
         "internet": "cpp",
         "optional": "cpp",
         "iosfwd": "cpp"
-    }
+    },
+    "makefile.configurations": [
+    
+    ]
 }

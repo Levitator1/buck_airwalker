@@ -7,6 +7,7 @@
 #include "util.hpp"
 #include "meta.hpp"
 #include "varargs.hpp"
+#include "ringbuf.hpp"
 
 namespace jab{
 namespace file{
@@ -17,7 +18,8 @@ enum flags{
     rw = r | w,
     noctty = w << 1,
     ndelay = noctty << 1,
-    nonblock = ndelay << 1
+    nonblock = ndelay << 1,
+    create = nonblock << 1
 };
 
 struct File_state{
@@ -88,6 +90,8 @@ public:
         write_exactly( traits::data(obj), traits::length(obj) );
     }
 };
+
+extern const File null_file;
 
 //stdin, stdout, stderr
 class StdFile:public File{
@@ -202,24 +206,68 @@ int select(Rfds &&rfds, Wfds &&wfds, Efds &&efds){
     return file::select(rfdsd.get(), wfdsd.get(), efdsd.get(), NULL);
 }
 
-template< typename Char, class Traits = std::char_traits<Char> >
+template< typename Char = char, class Traits = std::char_traits<Char> >
 class Filestreambuf : public std::basic_streambuf<Char, Traits>{
     using base_type = std::basic_streambuf<Char, Traits>;
-    using char_type = Char;
-    using streamsize = base_type::streamsize;
+    using char_type = Char;    
     using pos_type = base_type::pos_type;
     using off_type = base_type::off_type;
-    using traits_type = base_type::traits_type;
+    using traits_type = base_type::traits_type;    
     using int_type = base_type::int_type;
+    using streamsize = std::streamsize;
 
     char_type m_rbuf_bak, m_wbuf_bak; //single-character fallback buffers in case none are provided
-    char_type *m_rbuf, *m_wbuf;
-    streamsize m_buflen;
+    jab::io::ringbuffer<char_type> m_rbuf, m_wbuf;
+    
     File &m_file;
 
-    void reset_readbuf(){
-        setg(m_rbuf, m_rbuf, m_rbuf);
+    //Synchronize the streambuf get-pointers with the get-ringbuffer
+    void update_gptrs(){
+        this->setg(m_rbuf.get_begin(), m_rbuf.get_begin(), m_rbuf.get_end());
     }
+
+    //Synchronize the streambuf put-pointers with the put-ringbuffer
+    void update_pptrs(){
+        this->setp( m_wbuf.put_begin(), m_wbuf.put_end());
+    }
+
+    //Commit writes in the buffer window to the ringbuffer
+    void commit_wbuf(){
+        m_wbuf.push( this->pptr() - this->pbase() );
+    }
+
+    //Commit reads in the read-buffer window to the ringbuffer
+    void commit_rbuf(){
+        m_rbuf.pop( this->gptr() - this->eback() );
+    }
+    
+    //These guards commit updates to the user-facing end of the ringbuffer
+    //And when they go away, they ensure that the corresponding streambuf pointers are synchronized to the ringbuffer
+    class GetGuard{
+        Filestreambuf &m_buf;
+    public:
+        GetGuard( Filestreambuf &buf ):
+            m_buf(buf){
+                m_buf.commit_rbuf();
+        }
+
+        ~GetGuard(){
+            m_buf.update_gptrs();
+        }
+    };
+
+    class PutGuard{
+        Filestreambuf &m_buf;
+    public:
+        PutGuard( Filestreambuf &buf ):
+            m_buf(buf){
+                m_buf.commit_wbuf();
+        }
+
+        ~PutGuard(){
+            m_buf.update_pptrs();
+        }
+    };
 
 public:
     Filestreambuf(File &file):
@@ -228,41 +276,40 @@ public:
         setbuf(nullptr, 0);
     }
 
-    streamsize getbufavail() const{
-        return this->egptr() - this->gptr();
-    }
+    //streamsize getbufavail() const{
+        //return this->egptr() - this->gptr();
+    //}
 
     //TODO: Attempt to presrve the previous buffer data, because right now, this will purge it
-    virtual Filestreambuf* setbuf (char* s, streamsize n) override{
+    virtual base_type* setbuf (char* s, streamsize n) override{
         auto half = n / 2;
         if( half < 1 ){            
-            m_rbuf = &m_rbuf_bak;
-            m_wbuf = &m_wbuf_bak;
-            m_buflen = 1;
+            m_rbuf.buf(&m_rbuf_bak, 1);
+            m_wbuf.buf(&m_wbuf_bak, 1);            
         }
         else{
-            m_rbuf = s;
-            m_wbuf = &s[half];
-            m_buflen = half;            
+            m_rbuf.buf(s, half);
+            m_wbuf.buf(&s[half], half);               
         }   
 
-        reset_readbuf();
-        setp(m_wbuf, m_wbuf);
+        update_gptrs();
+        update_pptrs();
+        return this;
     }
 
     virtual pos_type seekpos (pos_type pos, std::ios_base::openmode which) override{
         if(which == std::ios_base::in){
-            setg(this->eback(), this->eback() + pos, this->egptr());
+            this->setg(this->eback(), this->eback() + pos, this->egptr());
             return pos;
         }
 
         if(which == std::ios_base::out){
             //This is kind of stupid, but setp resets the current output pointer to the start of the sequence,
             //so we set setp() to its current position for that side-effect.
-            //So, from there, you can bump it to an absolute position. Otherwise, I don't know how else to
+            //So, from there, you can bump pptr() to an absolute position. Otherwise, I don't know how else to
             //rewind it.
-            setp( this->pbase(), this->epptr() );
-            pbump( pos );
+            this->setp( this->pbase(), this->epptr() );
+            this->pbump( pos );
         }
         return pos;
     }
@@ -285,12 +332,11 @@ public:
                     newpos = this->gptr() + off;
                     break;
             }
-            setg(this->eback(), newpos, this->egptr());
-            return newpos - m_rbuf;
+            this->setg(this->eback(), newpos, this->egptr());
+            return newpos - this->eback();
         }
 
         if(which == std::ios_base::out){
-
             //Convert to an absolute position and just use seekpos
             pos_type newpos, curpos = this->pptr() - this->pbase();
 
@@ -300,7 +346,7 @@ public:
                     break;
 
                 case std::ios_base::end:
-                    newpos = this->egptr() - off;
+                    newpos = this->epptr() - this->pbase() - off;
                     break;
 
                 case std::ios_base::cur:
@@ -310,10 +356,24 @@ public:
 
             return seekpos(newpos, std::ios_base::out);
         }
+        return this->egptr() - this->eback();
+    }
+private:
+    streamsize drain_getbuf( char_type *s, streamsize n ){
+        streamsize ct = std::min((::size_t)n, m_rbuf.getavail() );
+        std::copy( m_rbuf.get_begin(), m_rbuf.get_begin() + ct, s );
+        m_rbuf.pop(ct);
+        return ct;
     }
 
-    virtual int sync() override{
+public:
+    //These next two only pertain to the underlying file and do not affect the buffering state according to the crappy online references.
+	//However, that seems to leave stuff in the buffer when the file closes. So we will flush the streambuf buffer as well.
+    virtual int sync() override{        
         try{
+			//Twice becasue the ringbuffer has up to two segments
+			overflow( traits_type::eof() );
+			overflow( traits_type::eof() );
             m_file.flush();
             return 0;
         }
@@ -327,22 +387,33 @@ public:
     }
 
     virtual streamsize xsgetn(char_type* s, streamsize n) override{
-        streamsize ct = 0, bufn = std::min(n, getbufavail());
-        std::copy( this->gptr(), &this->gptr()[bufn], s );
-        this->gbump(bufn);        
+
+        streamsize ct, bufn;
+        {
+            GetGuard gg(*this);
+
+            //Drain the ringbuffer twice because it can have up to 1 discontinuity
+            bufn = drain_getbuf(s, n);
+            s += bufn;
+            n -= bufn;
+            ct = drain_getbuf(s, n);
+            n -= ct;
+            s += ct;
+            bufn += ct;
+            ct = 0;
+        }
 
         //buffer underflow case
-        if( this->gptr() >= this->egptr() ){
-            n -= bufn;
-            s += bufn;
-
-            //If the buffer will just overflow again, then bulk-read straight into the destination
-            if( n > m_buflen ){                
-                ct = m_file.read_exactly(s, n);                
+        if( n > 0 ){            
+            //If the buffer will just fill up again, then bulk-read straight into the destination
+            if( n >= m_rbuf.capacity() ){                
+                ct = m_file.read(s, n);                
             }
             else{
-                if(this->underflow() != traits_type::eof())
-                    ct = this->xsgetn(s, n);
+                if(this->underflow() != traits_type::eof()){
+                    ct = drain_getbuf(s, n);
+                    update_gptrs();
+                }
             }
         }
 
@@ -351,26 +422,109 @@ public:
 
     //The buffer has to be larger than the maximum read size to ensure that there is always one putback space
     virtual int_type pbackfail (int_type c) override{
-        if( this->egptr() - this->eback() >= m_buflen )
-            return traits_type::eof;
-        
-        std::copy_backward( this->eback(), this->egptr(), this->egptr() + 1);
-        *this->gptr() = c;
+
+        GetGuard gg(*this);
+
+        if(m_rbuf.size() >= m_rbuf.capacity())
+            return traits_type::eof();
+
+        m_rbuf.unpop();
+        *m_rbuf.get_begin() = c;        
         return c;
     }
 
-    virtual streamsize xsputn(const char_type* s, streamsize n) override{
-        auto space = (m_wbuf + m_buflen) - this->epptr();
-        auto n  = std::min(n, space);
-
-        std::copy( s, s + n, this->epptr());
-        this->setp( this->pbase(), this->epptr() + n );
+private:
+    streamsize fill_wbuf(const char_type* s, streamsize n){        
+        n = std::min( m_wbuf.putavail(), (::size_t)n);
+        std::copy( s, s+n, m_wbuf.put_begin() );
+        m_wbuf.push(n);
         return n;
     }
 
-    virtual int_type overflow (int_type c) override{
-        
+public:
+    virtual streamsize xsputn(const char_type* s, streamsize n) override{
+
+        streamsize ct=0, ct2=0;
+
+        PutGuard pg(*this);
+
+        //If the buffer is already partially populated than try to fill it
+        if( m_wbuf.size() ){
+            ct = fill_wbuf(s, n);
+            s += ct;
+            n -= ct;
+
+            if( m_wbuf.size() >= m_wbuf.capacity()){
+                update_pptrs();
+                overflow( traits_type::eof() );
+            }
+
+            //If buffer failed to flush, then top it off and finish
+            if(m_wbuf.size())
+                return ct + fill_wbuf(s, n);            
+        }
+
+        //Write buffer should be empty here
+
+        //If the buffer is going to overflow anyway, write directly to the file
+        if( n >= m_wbuf.capacity()){
+            ct2 = m_file.write(s, n);
+            s += ct2;
+            n -= ct2;
+        }
+
+        //Now top off the buffer with any excess and finish        
+        return ct + ct2 + fill_wbuf(s, n);        
     }
+
+    //TODO: Handle no-op eof character
+    virtual int_type overflow (int_type c) override{
+
+		::ssize_t ct;
+        PutGuard pg(*this);
+
+		auto avail = m_wbuf.getavail();
+	
+		if(avail){
+        	ct = m_file.write( m_wbuf.get_begin(), m_wbuf.getavail() );
+			if(ct == 0)
+				return traits_type::eof();
+			else
+				m_wbuf.pop(ct);
+		}
+        
+		if( c != traits_type::eof() ){
+        	*m_wbuf.put_begin() = c;
+        	m_wbuf.push(1); //Not supposed to advance the position
+		}
+
+		return traits_type::to_int_type(c);
+    }
+
+    virtual int_type underflow() override{
+        GetGuard gg(*this);
+        auto space = m_rbuf.putavail();
+        auto ct = m_file.read( m_rbuf.put_begin(), space );
+        if(ct == 0)
+            return traits_type::eof();
+        
+        m_rbuf.push(ct);
+        return *m_rbuf.get_begin();
+    }
+};
+
+template< typename Ch, class File, typename Traits = std::char_traits<Ch> >
+class File_iostream : std::basic_iostream<Ch, Traits>{
+	using base_type = std::basic_iostream<Ch, Traits>;
+
+public:
+	using file_type = File;
+
+private:
+	file_type m_file;
+
+public:
+	File_iostream(file_type &&file, std::streamsize sz)
 
 };
 

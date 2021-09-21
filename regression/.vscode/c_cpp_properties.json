@@ -1,0 +1,33 @@
+{
+    "env": {
+        "myDefaultIncludePath": [
+            "${workspaceFolder}",            
+            "${workspaceFolder}/../utillib/include"
+        ],
+        "myCompilerPath": "/usr/bin/gcc"
+    },
+    "configurations": [
+        {
+            "name": "Linux",
+            "intelliSenseMode": "gcc-x64",
+            "includePath": [
+                "${myDefaultIncludePath}"
+            ],
+            "defines": [],
+            "forcedInclude": [],
+            "compilerPath": "${myCompilerPath}",
+            "cStandard": "c11",
+            "cppStandard": "c++20",
+            //"compileCommands": "/path/to/compile_commands.json",
+            "browse": {
+                "path": [
+                    "${workspaceFolder}"
+                ],
+                "limitSymbolsToIncludedHeaders": false
+                //"databaseFilename": ""
+            },
+            "configurationProvider": "ms-vscode.makefile-tools"
+        }
+    ],
+    "version": 4
+}

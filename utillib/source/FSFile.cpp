@@ -27,8 +27,9 @@ static int do_open( const char *path, int fl ){
     check_ofl(fl, ofl, ndelay, O_NDELAY);
     check_ofl(fl, ofl, noctty, O_NOCTTY);
     check_ofl(fl, ofl, nonblock, O_NONBLOCK);
+    check_ofl(fl, ofl, create, O_CREAT);
     
-    return posix_exception::check( ::open(path, ofl),  [path](){ return "Error opening file: "s + path; }, meta::type<IOError>() );    
+    return posix_exception::check( ::open(path, ofl, S_IRUSR | S_IWUSR),  [path](){ return "Error opening file: "s + path; }, meta::type<IOError>() );    
 }
 
 FSFile::FSFile(const std::filesystem::path &path, int fl):

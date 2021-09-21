@@ -9,5 +9,6 @@ AC_CONFIG_FILES([
  source/Makefile
  utillib/Makefile
  utillib/source/Makefile
+ regression/Makefile
 ])
 AC_OUTPUT

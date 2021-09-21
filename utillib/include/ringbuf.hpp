@@ -8,6 +8,8 @@ namespace io{
 /*
 *
 * A ringbuffer whose ranges are presented as pointers for ease of use in streambuf implementations
+* There are up to two segments of content in a ringbuffer, so to see all of the contents, you must
+* consume the first and roll the buffer over.
 *
 */
 template<typename T>
@@ -21,12 +23,20 @@ private:
     value_type *m_buffer, *m_buffer_end, *m_head, *m_tail;
     
 public:
-    ringbuffer( value_type *buf = nullptr, ::size_t sz = 1){
-        buf(buf, sz);
+    ringbuffer( value_type *bufp = nullptr, ::size_t sz = 0){
+        buf(bufp, sz);
     }
     
+    ::size_t size() const{
+        return m_size;
+    }
+
+    ::size_t capacity() const{
+        return m_capacity;
+    }
+
     void buf(value_type *buf, ::size_t sz){
-        m_capacity = sz - 1;
+        m_capacity = sz;
         m_size = 0;
         m_tail = m_head = m_buffer = buf;
         m_buffer_end = m_buffer + sz;        
@@ -36,28 +46,48 @@ public:
     //We assume that nobody will ever try to write past the end of the range
     //So, we will check for them writing right up until the end to decide whether to wrap around.
     void push(::size_t n){
-        m_tail += n;
-        m_size += n;
 
-        if(m_tail >= m_buffer_end)
+		if(!n) return;
+		if(m_tail == m_buffer_end)
             m_tail = m_buffer;
+
+        m_tail += n;
+        m_size += n;        
     }
 
     void pop(::size_t n){
         m_head += n;
         m_size -= n;
 
-        if(m_head >= m_buffer_end)
+        if(m_size == 0)
+            m_head = m_tail = m_buffer;
+        else if(m_head >= m_buffer_end)
             m_head = m_buffer;
     }
 
     //Insert one into the head end, analogous to unreading IO
-    //It must then be popupated with an assignment to *put_begin()
+    //It must then be upated with an assignment to *put_begin()
     void unpop(){
         --m_head;
         if(m_head < m_buffer)
-            m_head = m_buffer_end-1;
+            m_head = m_buffer_end - 1;
         ++m_size;
+    }
+
+    value_type *get_begin() const{
+        return m_head;
+    }
+
+    value_type *get_end() const{
+        return m_tail >= m_head ? m_tail : m_buffer_end;
+    }
+
+    value_type *put_begin() const{
+        return m_tail;
+    }
+
+    value_type *put_end() const{
+        return m_tail >= m_head ? m_tail : m_head;
     }
 
     value_type *get_begin(){
@@ -69,12 +99,22 @@ public:
     }
 
     value_type *put_begin(){
-        return m_tail;
+		return m_tail == m_buffer_end ? m_buffer : m_tail;        
     }
 
     value_type *put_end(){
-        return m_tail >= m_head ? m_tail : m_head - 1;
-    }    
+        return m_tail >= m_head ? m_tail : m_head;
+    }
+
+    //How many elements are available to fetch in the current segment, not total
+    ::size_t getavail() const{
+        return get_end() - get_begin();
+    }
+
+    ::size_t putavail() const{
+        return put_end() - put_begin();
+    }
+
 };
 
 /*

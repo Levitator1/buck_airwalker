@@ -1,0 +1,17 @@
+#AX_CHECK_ENABLE_DEBUG()
+LIBUTIL_PATH = $(top_builddir)/../../utillib/build/source/libutil.a
+
+bin_PROGRAMS = regression
+regression_SOURCES = main.cpp io.cpp test.cpp
+regression_DEPENDENCIES = $(LIBUTIL_PATH)
+
+AM_CPPFLAGS = -std=c++2a -I$(srcdir)/../utillib/include/
+#AM_CXXFLAGS=
+#regression_CPPFLAGS=
+#regression_CXXFLAGS=
+
+LDADD = $(LIBUTIL_PATH)
+
+.PHONY: $(LIBUTIL_PATH)
+$(LIBUTIL_PATH):
+	make -C `dirname $(LIBUTIL_PATH)`

@@ -63,5 +63,9 @@ public:
     */
 };
 
+void print_exception( std::ostream &stream, const std::exception &ex );
+std::ostream &operator<<( std::ostream &stream,  const std::exception &ex );
+
 }    
 }
+
