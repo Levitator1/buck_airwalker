@@ -1,5 +1,5 @@
 #AX_CHECK_ENABLE_DEBUG()
-LIBUTIL_PATH = $(top_builddir)/../../utillib/build/source/libutil.a
+LIBUTIL_PATH = $(top_builddir)/../utillib/source/libutil.a
 
 bin_PROGRAMS = regression
 regression_SOURCES = main.cpp io.cpp test.cpp

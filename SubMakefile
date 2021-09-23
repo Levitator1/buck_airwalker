@@ -1,0 +1,25 @@
+# Autconfig and make each subdirectory
+# unfinished
+
+SUBDIRS = utillib app regression
+
+.PHONY: all
+all: $(SUBDIRS)
+
+%/build:
+	mkdir "$@" || true
+
+%/build/config.status %/build/Makefile %/build/config.h: %/configure.ac %/Makefile.am:
+	cd "$*";$../configure $(CONFIGURE_FLAGS)
+
+%/configure: %/configure.ac %/Makefile.am
+	
+
+%/build/Makefile: %/build %/configure.ac %/Makefile.am
+	autoreconf -f -i "$*"
+
+%: %/build/Makefile
+	make -C "$*/build" "$(TARGET)"
+
+
+

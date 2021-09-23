@@ -282,7 +282,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 
 #AX_CHECK_ENABLE_DEBUG()
-LIBUTIL_PATH = $(top_builddir)/../../utillib/build/source/libutil.a
+LIBUTIL_PATH = $(top_builddir)/../utillib/source/libutil.a
 regression_SOURCES = main.cpp io.cpp test.cpp
 regression_DEPENDENCIES = $(LIBUTIL_PATH)
 AM_CPPFLAGS = -std=c++2a -I$(srcdir)/../utillib/include/

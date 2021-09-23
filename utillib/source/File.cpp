@@ -2,6 +2,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/select.h>
+#include <stdexcept>
 #include <string>
 #include <vector>
 #include <iostream> //For debugging
@@ -13,7 +14,7 @@ using namespace jab::exception;
 using namespace std::string_literals;
 using namespace jab::file;
 
-const File null_file = {};
+NullFile jab::file::null_file = {};
 
 jab::file::File::File(){}
 File::File(fd_t fd):m_state{fd}{}
@@ -44,14 +45,18 @@ File::File(File &&rhs){
     rhs.m_state.m_fd = null_fd;
 }
 
-File &File::operator=(File &&rhs){
-    if(this == &rhs) return *this;
+void File::move_assign(File &&rhs){
+	if(this == &rhs) return;
     m_state = rhs.m_state;
     rhs.m_state.m_fd = null_fd;
+}
+
+File &File::operator=(File &&rhs){
+    move_assign( std::move(rhs) );
     return *this;
 }
 
-::ssize_t File::read(char *data, len_t len){
+std::streamsize File::read(char *data, std::streamsize len){
     ::ssize_t result = posix_exception::check(::read(m_state.m_fd, data, len), "Error reading file", meta::type<IOError>());    
 
     if(m_state.m_debug)
@@ -61,7 +66,7 @@ File &File::operator=(File &&rhs){
 }
 
 //Insist on reading a certain length, or until EOF
-File::len_t File::read_exactly(char *data, len_t len){
+std::streamsize File::read_exactly(char *data, std::streamsize len){
     auto begin=data;
     len_t ct;
     
@@ -75,7 +80,7 @@ File::len_t File::read_exactly(char *data, len_t len){
     return data - begin;
 }
 
-::ssize_t File::write(const char *data, len_t len){
+std::streamsize File::write(const char *data, std::streamsize len){
 
     ::ssize_t result = posix_exception::check(::write(m_state.m_fd, data, len), "Error writing file", meta::type<IOError>());
     
@@ -85,7 +90,31 @@ File::len_t File::read_exactly(char *data, len_t len){
     return result;
 }
 
-void File::write_exactly(const char *data, len_t len){
+std::streamsize File::seek(std::streamsize pos, std::ios_base::seekdir dir){
+	int dir2;
+
+	switch(dir){
+		case std::ios_base::beg:
+			dir2 = SEEK_SET;
+			break;
+
+		case std::ios_base::cur:
+			dir2 = SEEK_CUR;
+			break;
+		
+		case std::ios_base::end:
+			dir2 = SEEK_END;
+			break;
+		
+		default:
+			throw std::invalid_argument("Invalid seek direction");
+	}
+
+	return posix_exception::check( ::lseek(m_state.m_fd, pos, dir2), "Error seeking file", meta::type<IOError>() );	
+
+}
+
+void File::write_exactly(const char *data, std::streamsize len){
     
     ::ssize_t ct=0;
     while(len){
@@ -123,7 +152,7 @@ StdFile StdFile::stdout(1);
 StdFile StdFile::stderr(2);
 
 //This implementation is suitable for sockets, too
-::size_t File::available() const{
+std::streamsize File::available() const{
     int result;
     const_ioctl(FIONREAD, &result);
     return result;
@@ -216,4 +245,8 @@ int jab::file::select(FDSet &rfds, FDSet &wfds, FDSet &efds, ::timeval *timeout)
 jab::file::timeval::timeval(sec_t sec, usec_t usec): ::timeval{0}{
     tv_sec = sec;
     tv_usec = usec;
+}
+
+void NullFile::move_assign( File &&rhs ){
+	throw std::invalid_argument("Move-assigned to the null File object");
 }

@@ -7,7 +7,7 @@ make all -f "/home/j/project/buck_air_walker/app/build/Makefile" -C "/home/j/pro
 # There is NO WARRANTY, to the extent permitted by law.
  
 
-# Make data base, printed on Fri Sep 17 16:11:11 2021
+# Make data base, printed on Thu Sep 23 12:38:37 2021
 
 # Variables
 
@@ -44,7 +44,7 @@ AM_DISTCHECK_DVI_TARGET = dvi
 # makefile (from '/home/j/project/buck_air_walker/app/build/Makefile', line 276)
 install_sh = ${SHELL} /home/j/project/buck_air_walker/install-sh
 # environment
-VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-b53d1a4f-7ba0-41c0-a87f-1e9abc126ce2.sock
+VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-60ac51e8-229b-4c5c-ac16-1aecb1cee24d.sock
 # makefile (from '/home/j/project/buck_air_walker/app/build/Makefile', line 16)
 VPATH = ..
 # makefile (from '/home/j/project/buck_air_walker/app/build/Makefile', line 230)
@@ -110,7 +110,6 @@ builddir = .
 # makefile (from '/home/j/project/buck_air_walker/app/build/Makefile', line 100)
 CONFIG_CLEAN_VPATH_FILES = 
 # environment
- 
 VSCODE_CODE_CACHE_PATH = /home/j/.config/Code/CachedData/e7d7e9a9348e6a8cc8c03f877d39cb72e5dfb1ff
 # environment
 XDG_SESSION_PATH = /org/freedesktop/DisplayManager/Session0
@@ -161,11 +160,11 @@ am__v_GEN_0 = @echo "  GEN     " $@;
 # environment
 MFLAGS = -pqrRw
 # environment
-SSH_AUTH_SOCK = /tmp/ssh-Xmwbk9CKuX7c/agent.1413
+SSH_AUTH_SOCK = /tmp/ssh-SHO301mxNJhp/agent.1431
 # default
 .SHELLFLAGS := -c
 # environment
-_LXSESSION_PID = 1413
+_LXSESSION_PID = 1431
 # makefile (from '/home/j/project/buck_air_walker/app/build/Makefile', line 286)
 program_transform_name = s,x,x,
 # makefile (from '/home/j/project/buck_air_walker/app/build/Makefile', line 269)
@@ -177,6 +176,7 @@ XDG_CONFIG_DIRS = /etc/xdg
 # makefile (from '/home/j/project/buck_air_walker/app/build/Makefile', line 259)
 am__include = include
 # environment
+ 
 VSCODE_CRASH_REPORTER_START_OPTIONS = {"companyName":"Microsoft","productName":"VSCode","submitURL":"appcenter://code?aid=fba07a4d-84bd-4fc8-a125-9640fc8ce171&uid=b9a2287a-c033-4d95-a3ba-45c9481f2d54&iid=b9a2287a-c033-4d95-a3ba-45c9481f2d54&sid=b9a2287a-c033-4d95-a3ba-45c9481f2d54","uploadToServer":true}
 # environment
 XDG_SESSION_DESKTOP = lightdm-xsession
@@ -189,7 +189,7 @@ ECHO_N = -n
 # environment
 VSCODE_VERBOSE_LOGGING = true
 # environment
-VSCODE_PID = 2007
+VSCODE_PID = 4113
 # environment
 XDG_SESSION_TYPE = x11
 # automatic
@@ -255,7 +255,6 @@ MAKE_HOST := x86_64-pc-linux-gnu
 # makefile (from '/home/j/project/buck_air_walker/app/build/Makefile', line 255)
 abs_top_srcdir = /home/j/project/buck_air_walker/app/build/..
 # makefile (from '/home/j/project/buck_air_walker/app/build/Makefile', line 83)
- 
 PRE_INSTALL = :
 # makefile (from '/home/j/project/buck_air_walker/app/build/Makefile', line 249)
 SHELL = /bin/bash
@@ -367,6 +366,7 @@ GNUMAKEFLAGS :=
 abs_srcdir = /home/j/project/buck_air_walker/app/build/..
 # makefile (from '/home/j/project/buck_air_walker/app/build/Makefile', line 71)
 am__make_keepgoing = (target_option=k; $(am__make_running_with_option))
+ 
 # makefile (from '/home/j/project/buck_air_walker/app/build/Makefile', line 291)
 srcdir = ..
 # makefile (from '/home/j/project/buck_air_walker/app/build/Makefile', line 290)
@@ -392,7 +392,6 @@ LTLIBOBJS =
 # environment
 XDG_VTNR = 7
 # makefile (from '/home/j/project/buck_air_walker/app/build/Makefile', line 102)
- 
 am__v_P_ = $(am__v_P_$(AM_DEFAULT_VERBOSITY))
 # makefile
 .DEFAULT_GOAL := all
@@ -427,7 +426,7 @@ am__post_remove_distdir = $(am__remove_distdir)
 # makefile (from '/home/j/project/buck_air_walker/app/build/Makefile', line 284)
 pdfdir = ${docdir}
 # environment
-SSH_AGENT_PID = 1519
+SSH_AGENT_PID = 1524
 # makefile (from '/home/j/project/buck_air_walker/app/build/Makefile', line 86)
 PRE_UNINSTALL = :
 # environment
@@ -497,7 +496,6 @@ DEPDIR = .deps
 # default
 SUFFIXES := 
 # makefile (from '/home/j/project/buck_air_walker/app/build/Makefile', line 81)
- 
 transform = $(program_transform_name)
 # makefile (from '/home/j/project/buck_air_walker/app/build/Makefile', line 288)
 runstatedir = ${localstatedir}/run
@@ -536,6 +534,7 @@ AM_V_GEN = $(am__v_GEN_$(V))
 # environment
 GDMSESSION = lightdm-xsession
 # variable set hash-table stats:
+ 
 # Load=260/1024=25%, Rehash=0, Collisions=98/387=25%
 
 # Pattern-specific Variable Values
@@ -588,7 +587,6 @@ dist-bzip2: distdir
 ../../compile:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
- 
 #  File has not been updated.
 
 dist-zstd: distdir
@@ -753,7 +751,6 @@ all-recursive:
 #  File does not exist.
 #  File has not been updated.
 #  recipe to execute (from '/home/j/project/buck_air_walker/app/build/Makefile', line 358):
- 
 	@fail=; \
 	if $(am__make_keepgoing); then \
 	  failcom='fail=yes'; \
@@ -787,6 +784,7 @@ install-recursive:
 #  File does not exist.
 #  File has not been updated.
 #  recipe to execute (from '/home/j/project/buck_air_walker/app/build/Makefile', line 358):
+ 
 	@fail=; \
 	if $(am__make_keepgoing); then \
 	  failcom='fail=yes'; \
@@ -988,7 +986,6 @@ pdf: pdf-recursive
 #  Phony target (prerequisite of .PHONY).
 #  Implicit rule search has not been done.
 #  File does not exist.
- 
 #  File has not been updated.
 
 distclean-generic:
@@ -1004,6 +1001,7 @@ html: html-recursive
 #  Phony target (prerequisite of .PHONY).
 #  Implicit rule search has not been done.
 #  File does not exist.
+ 
 #  File has not been updated.
 
 clean-generic:
@@ -1112,7 +1110,6 @@ cscope: cscope.files
 #  Phony target (prerequisite of .PHONY).
 #  Implicit rule search has not been done.
 #  File does not exist.
- 
 #  File has not been updated.
 #  recipe to execute (from '/home/j/project/buck_air_walker/app/build/Makefile', line 432):
 	test ! -s cscope.files \
@@ -1120,7 +1117,7 @@ cscope: cscope.files
 
 stamp-h1: ../config.h.in config.status
 #  Implicit rule search has not been done.
-#  Last modified 2021-09-17 16:11:11.811828575
+#  Last modified 2021-09-21 10:53:14.167398623
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from '/home/j/project/buck_air_walker/app/build/Makefile', line 341):
@@ -1135,6 +1132,7 @@ install-pdf-am:
 
 ../configure.ac:
 #  Implicit rule search has been done.
+ 
 #  Last modified 2021-09-11 13:46:40.475642252
 #  File has been updated.
 #  Successfully updated.
@@ -1178,7 +1176,6 @@ ps-am:
 #  Implicit rule search has not been done.
 #  File does not exist.
 #  File has not been updated.
- 
 
 ../Makefile.in: ../Makefile.am ../configure.ac ../aclocal.m4
 #  Implicit rule search has not been done.
@@ -1278,6 +1275,7 @@ distclean-recursive:
 	fi; test -z "$$fail"
 
 dist-zip: distdir
+ 
 #  Phony target (prerequisite of .PHONY).
 #  Implicit rule search has not been done.
 #  File does not exist.
@@ -1342,7 +1340,6 @@ install-html: install-html-recursive
 #  File has not been updated.
 
 ps: ps-recursive
- 
 #  Phony target (prerequisite of .PHONY).
 #  Implicit rule search has not been done.
 #  File does not exist.
@@ -1395,7 +1392,7 @@ info: info-recursive
 # Not a target:
 /home/j/project/buck_air_walker/app/build/Makefile:
 #  Implicit rule search has been done.
-#  Last modified 2021-09-17 16:11:11.779827805
+#  Last modified 2021-09-21 10:53:14.131397564
 #  File has been updated.
 #  Successfully updated.
 
@@ -1473,10 +1470,9 @@ all-am: Makefile config.h
 
 config.status: ../configure
 #  Implicit rule search has not been done.
-#  Last modified 2021-09-17 16:11:11.691825687
+#  Last modified 2021-09-21 10:53:14.027394505
 #  File has been updated.
 #  Successfully updated.
- 
 #  recipe to execute (from '/home/j/project/buck_air_walker/app/build/Makefile', line 328):
 	$(SHELL) ./config.status --recheck
 
@@ -1484,6 +1480,7 @@ installdirs-am:
 #  Phony target (prerequisite of .PHONY).
 #  Implicit rule search has not been done.
 #  File does not exist.
+ 
 #  File has not been updated.
 
 TAGS: tags
@@ -1649,7 +1646,6 @@ install-html-recursive:
 	  $(MAKE) $(AM_MAKEFLAGS) "$$target-am" || exit 1; \
 	fi; test -z "$$fail"
 
- 
 clean-recursive:
 #  Phony target (prerequisite of .PHONY).
 #  Implicit rule search has not been done.
@@ -1777,6 +1773,7 @@ all: config.h
 #  Modification time never checked.
 #  File has not been updated.
 
+ 
 dist-shar: distdir
 #  Phony target (prerequisite of .PHONY).
 #  Implicit rule search has not been done.
@@ -1852,7 +1849,6 @@ install-dvi: install-dvi-recursive
 #  File has not been updated.
 
 html-recursive:
- 
 #  Phony target (prerequisite of .PHONY).
 #  Implicit rule search has not been done.
 #  File does not exist.
@@ -1963,7 +1959,6 @@ dist-tarZ: distdir
 	tardir=$(distdir) && $(am__tar) | compress -c >$(distdir).tar.Z
 	$(am__post_remove_distdir)
 
- 
 install-ps: install-ps-recursive
 #  Phony target (prerequisite of .PHONY).
 #  Implicit rule search has not been done.
@@ -1985,6 +1980,7 @@ install-data: install-data-recursive
 install-strip:
 #  Phony target (prerequisite of .PHONY).
 #  Implicit rule search has not been done.
+ 
 #  File does not exist.
 #  File has not been updated.
 #  recipe to execute (from '/home/j/project/buck_air_walker/app/build/Makefile', line 669):
@@ -2088,7 +2084,6 @@ cscopelist: cscopelist-recursive
 
 info-am:
 #  Phony target (prerequisite of .PHONY).
- 
 #  Implicit rule search has not been done.
 #  File does not exist.
 #  File has not been updated.
@@ -2240,6 +2235,7 @@ ctags-recursive:
 #  Modification time never checked.
 #  File has not been updated.
 
+ 
 uninstall-am:
 #  Phony target (prerequisite of .PHONY).
 #  Implicit rule search has not been done.
@@ -2254,7 +2250,6 @@ uninstall-am:
 # Not a target:
 ../../install-sh:
 #  Implicit rule search has not been done.
- 
 #  Modification time never checked.
 #  File has not been updated.
 
@@ -2350,6 +2345,6 @@ clean-am: clean-generic mostlyclean-am
 # strcache performance: lookups = 463 / hit rate = 71%
 # hash-table stats:
 # Load=133/8192=2%, Rehash=0, Collisions=8/463=2%
-# Finished Make data base on Fri Sep 17 16:11:12 2021
+# Finished Make data base on Thu Sep 23 12:38:37 2021
 
  

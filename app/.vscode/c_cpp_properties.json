@@ -2,7 +2,8 @@
     "env": {
         "myDefaultIncludePath": [
             "${workspaceFolder}",
-            "${workspaceFolder}/include"
+            "${workspaceFolder}/include",
+			"${workspaceFolder}/../utillib/include"
         ],
         "myCompilerPath": "/usr/bin/gcc"
     },
@@ -12,8 +13,9 @@
             "intelliSenseMode": "gcc-x64",
             "includePath": [
                 "${myDefaultIncludePath}",
-				"${workspaceFolder}/build",
+				"${workspaceFolder}/../build",
 				"${workspaceFolder}/include",
+				"${workspaceFolder}/../utillib/include",
 				"${workspaceFolder}/**"
             ],
             "defines": [],

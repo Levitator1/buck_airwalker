@@ -3,40 +3,30 @@
     // for the documentation about the tasks.json format
     "version": "2.0.0",
     "tasks": [
-        {
-            "label": "make",
-            "type": "shell",
-            "command": "mkdir -p build;make -C build -j `nproc`",
-            //"problemMatcher": ["$gcc"],
-            "problemMatcher": {
-                "base": "$gcc",
-                "fileLocation": ["relative", "${workspaceFolder}/build"],
-              },
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            }
-        },
-        {
-            "label": "Autoreconf",
-            "type": "shell",
-            "command": "autoreconf --install; cd build;../configure",
-            "problemMatcher": ["$gcc"],
-            "group": "build"
-        },
-        {
-            "label": "configure",
-            "type": "shell",
-            "command": "cd build;../configure",
-            "problemMatcher": ["$gcc"],
-            "group": "build"
-        },
-        {
-            "label": "Clean",
-            "type": "shell",
-            "command": "cd build;make clean",
-            "problemMatcher": ["$gcc"],
-            "group": "none"
-        }
-    ]
+		{
+			"label": "make regression",
+			"type": "shell",
+			"command": "make -C ${workspaceFolder}/../build/regression -j `nproc`",
+			"problemMatcher": {
+				"base": "$gcc",
+				"fileLocation": [
+					"relative",
+					"${workspaceFolder}/../build/regression"
+				]
+			},
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		},
+		{
+			"label": "Clean",
+			"type": "shell",
+			"command": "make -C ${workspaceFolder}/../build/regression clean",
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "none"
+		}
+	]
 }

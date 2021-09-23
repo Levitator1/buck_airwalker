@@ -1,6 +1,8 @@
 #pragma once
+#include <functional>
 #include <algorithm>
 #include <vector>
+#include "util.hpp"
 
 namespace jab{
 namespace io{
@@ -9,37 +11,55 @@ namespace io{
 *
 * A ringbuffer whose ranges are presented as pointers for ease of use in streambuf implementations
 * There are up to two segments of content in a ringbuffer, so to see all of the contents, you must
-* consume the first and roll the buffer over.
+* consume the first to roll the buffer over.
 *
 */
 template<typename T>
 class ringbuffer{
-
 public:
     using value_type = T;
-
+	
 private:
-    ::size_t m_capacity, m_size;
-    value_type *m_buffer, *m_buffer_end, *m_head, *m_tail;
-    
+	struct State{
+    	::size_t m_capacity, m_size;
+    	value_type *m_buffer, *m_buffer_end, *m_head, *m_tail;
+	} m_state;
+    	
+	auto mk_get_range(){
+		return jab::util::range_property( [this](){ return this->get_begin(); }, [this](){ return this->get_end(); } );
+	}
+
+	auto mk_put_range(){
+		return jab::util::range_property( [this](){ return this->put_begin(); }, [this](){ return this->put_end(); } );
+	}
+
 public:
+	const decltype( std::declval<ringbuffer>().mk_get_range() ) get_range = this->mk_get_range();
+	const decltype( std::declval<ringbuffer>().mk_put_range() ) put_range = this->mk_put_range();
+
     ringbuffer( value_type *bufp = nullptr, ::size_t sz = 0){
         buf(bufp, sz);
     }
     
+	ringbuffer &operator=( ringbuffer &&rhs ){
+		m_state = std::move(rhs.m_state);
+		rhs.buf(nullptr, 0);
+		return *this;
+	}
+
     ::size_t size() const{
-        return m_size;
+        return m_state.m_size;
     }
 
     ::size_t capacity() const{
-        return m_capacity;
+        return m_state.m_capacity;
     }
 
     void buf(value_type *buf, ::size_t sz){
-        m_capacity = sz;
-        m_size = 0;
-        m_tail = m_head = m_buffer = buf;
-        m_buffer_end = m_buffer + sz;        
+        m_state.m_capacity = sz;
+        m_state.m_size = 0;
+        m_state.m_tail = m_state.m_head = m_state.m_buffer = buf;
+        m_state.m_buffer_end = m_state.m_buffer + sz;        
     }
 
     //Pull in n bytes having previously been written to the input range
@@ -48,62 +68,62 @@ public:
     void push(::size_t n){
 
 		if(!n) return;
-		if(m_tail == m_buffer_end)
-            m_tail = m_buffer;
+		if(m_state.m_tail == m_state.m_buffer_end)
+            m_state.m_tail = m_state.m_buffer;
 
-        m_tail += n;
-        m_size += n;        
+        m_state.m_tail += n;
+        m_state.m_size += n;        
     }
 
     void pop(::size_t n){
-        m_head += n;
-        m_size -= n;
+        m_state.m_head += n;
+        m_state.m_size -= n;
 
-        if(m_size == 0)
-            m_head = m_tail = m_buffer;
-        else if(m_head >= m_buffer_end)
-            m_head = m_buffer;
+        if(m_state.m_size == 0)
+            m_state.m_head = m_state.m_tail = m_state.m_buffer;
+        else if(m_state.m_head >= m_state.m_buffer_end)
+            m_state.m_head = m_state.m_buffer;
     }
 
     //Insert one into the head end, analogous to unreading IO
     //It must then be upated with an assignment to *put_begin()
     void unpop(){
-        --m_head;
-        if(m_head < m_buffer)
-            m_head = m_buffer_end - 1;
-        ++m_size;
+        --m_state.m_head;
+        if(m_state.m_head < m_state.m_buffer)
+            m_state.m_head = m_state.m_buffer_end - 1;
+        ++m_state.m_size;
     }
 
     value_type *get_begin() const{
-        return m_head;
+        return m_state.m_head;
     }
 
     value_type *get_end() const{
-        return m_tail >= m_head ? m_tail : m_buffer_end;
+        return m_state.m_tail >= m_state.m_head ? m_state.m_tail : m_state.m_buffer_end;
     }
 
     value_type *put_begin() const{
-        return m_tail;
+        return m_state.m_tail;
     }
 
     value_type *put_end() const{
-        return m_tail >= m_head ? m_tail : m_head;
+        return m_state.m_tail >= m_state.m_head ? m_state.m_tail : m_state.m_head;
     }
 
     value_type *get_begin(){
-        return m_head;
+        return m_state.m_head;
     }
 
     value_type *get_end(){
-        return m_tail >= m_head ? m_tail : m_buffer_end;
+        return m_state.m_tail >= m_state.m_head ? m_state.m_tail : m_state.m_buffer_end;
     }
 
     value_type *put_begin(){
-		return m_tail == m_buffer_end ? m_buffer : m_tail;        
+		return m_state.m_tail == m_state.m_buffer_end ? m_state.m_buffer : m_state.m_tail;
     }
 
     value_type *put_end(){
-        return m_tail >= m_head ? m_tail : m_head;
+        return m_state.m_tail >= m_state.m_head ? m_state.m_tail : m_state.m_head;
     }
 
     //How many elements are available to fetch in the current segment, not total

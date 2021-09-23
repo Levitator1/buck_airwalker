@@ -66,6 +66,21 @@ public:
 void print_exception( std::ostream &stream, const std::exception &ex );
 std::ostream &operator<<( std::ostream &stream,  const std::exception &ex );
 
+template<class Arg0, class Arg1, class... Args>
+void nest_exceptions(Arg0 ex0, Arg1 ex1, Args... exn){
+	try{
+		next_exceptions(ex1, exn...);
+	}
+	catch(Arg1 x){
+		std::throw_with_nested(ex0);
+	}
+}
+
+template<class Arg0>
+void nest_exceptions(Arg0 ex0){
+	throw ex0;
+}
+
 }    
 }
 

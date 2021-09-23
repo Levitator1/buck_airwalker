@@ -17,9 +17,23 @@
             }
         },
         {
+            "label": "Autoreconf",
+            "type": "shell",
+            "command": "autoreconf -f -i; cd build;../configure",
+            "problemMatcher": ["$gcc"],
+            "group": "build"
+        },
+        {
+            "label": "configure",
+            "type": "shell",
+            "command": "cd build;../configure",
+            "problemMatcher": ["$gcc"],
+            "group": "build"
+        },
+        {
             "label": "Clean",
             "type": "shell",
-            "command": "make -C ../build/utillib clean",
+            "command": "cd build;make clean",
             "problemMatcher": ["$gcc"],
             "group": "none"
         }

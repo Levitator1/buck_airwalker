@@ -4,7 +4,28 @@
 
 namespace jab{
 namespace util{
-        
+
+
+//Allows a single class to offer multiple begin()/end() ranges
+template<class BeginF, class EndF>
+class range_property{
+	const BeginF m_beginf;
+	const EndF m_endf;
+
+public:
+	range_property(BeginF beg, EndF endf):
+		m_beginf(beg),
+		m_endf(endf){}
+
+	auto begin(){ return m_beginf(); }
+	auto begin() const { return m_beginf(); }
+	auto end(){ return m_endf(); }
+	auto end() const { return m_endf(); }
+};
+
+template<class BeginF, class EndF>
+range_property(BeginF beg, EndF en) -> range_property<BeginF, EndF>;
+
 //Do one of two things on scope exit
 template<typename Ft, typename Ff>
 class cond_guard{
