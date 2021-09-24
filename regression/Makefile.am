@@ -4,11 +4,7 @@ LIBUTIL_PATH = $(top_builddir)/../utillib/source/libutil.a
 bin_PROGRAMS = regression
 regression_SOURCES = main.cpp io.cpp test.cpp
 regression_DEPENDENCIES = $(LIBUTIL_PATH)
-
 AM_CPPFLAGS = -std=c++2a -I$(srcdir)/../utillib/include/
-#AM_CXXFLAGS=
-#regression_CPPFLAGS=
-#regression_CXXFLAGS=
 
 LDADD = $(LIBUTIL_PATH)
 

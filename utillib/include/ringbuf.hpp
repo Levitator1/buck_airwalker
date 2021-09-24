@@ -2,6 +2,7 @@
 #include <functional>
 #include <algorithm>
 #include <vector>
+#include "meta.hpp"
 #include "util.hpp"
 
 namespace jab{
@@ -94,37 +95,62 @@ public:
         ++m_state.m_size;
     }
 
-    value_type *get_begin() const{
-        return m_state.m_head;
+private:
+	template<typename U>
+	using EitherThis = jab::meta::permit_types<U, ringbuffer<T> *, const ringbuffer<T> *>;
+
+	template<class This, class =  EitherThis<This>>
+    static auto get_begin_impl(This th){
+        return th->m_state.m_head;
     }
 
-    value_type *get_end() const{
-        return m_state.m_tail >= m_state.m_head ? m_state.m_tail : m_state.m_buffer_end;
+	template<class This, class =  EitherThis<This>>
+    static auto get_end_impl(This th){
+        return th->m_state.m_tail >= th->m_state.m_head ? th->m_state.m_tail : th->m_state.m_buffer_end;
     }
 
-    value_type *put_begin() const{
-        return m_state.m_tail;
+	template<class This, class =  EitherThis<This>>
+    static auto put_begin_impl(This th){
+		return th->m_state.m_tail == th->m_state.m_buffer_end ? th->m_state.m_buffer : th->m_state.m_tail;
     }
 
-    value_type *put_end() const{
-        return m_state.m_tail >= m_state.m_head ? m_state.m_tail : m_state.m_head;
+	template<class This, class =  EitherThis<This>>
+    static auto put_end_impl(This th){
+        return th->m_state.m_tail >= th->m_state.m_head ? th->m_state.m_buffer_end : th->m_state.m_head;
     }
 
-    value_type *get_begin(){
-        return m_state.m_head;
+public:
+	const value_type *get_begin() const{
+        return get_begin_impl(this);
     }
 
-    value_type *get_end(){
-        return m_state.m_tail >= m_state.m_head ? m_state.m_tail : m_state.m_buffer_end;
+	value_type *get_begin(){
+		return get_begin_impl(this);
+	}
+
+    const value_type *get_end() const{
+        return get_end_impl(this);
     }
 
-    value_type *put_begin(){
-		return m_state.m_tail == m_state.m_buffer_end ? m_state.m_buffer : m_state.m_tail;
+	value_type *get_end(){
+		return get_end_impl(this);
+	}
+
+	const value_type *put_begin() const{
+        return put_begin_impl(this);
     }
 
-    value_type *put_end(){
-        return m_state.m_tail >= m_state.m_head ? m_state.m_tail : m_state.m_head;
+	value_type *put_begin(){
+		return put_begin_impl(this);
+	}
+
+    const value_type *put_end() const{
+        return put_end_impl(this);
     }
+
+	value_type *put_end(){
+		return put_end_impl(this);
+	}
 
     //How many elements are available to fetch in the current segment, not total
     ::size_t getavail() const{
@@ -134,7 +160,6 @@ public:
     ::size_t putavail() const{
         return put_end() - put_begin();
     }
-
 };
 
 /*

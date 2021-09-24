@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             //"program": "${fileDirname}/${fileBasenameNoExtension}",
-            "program": "${workspaceFolder}/build/regression",            
+            "program": "${workspaceFolder}/../build/regression/regression",            
             "args": [],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",

@@ -295,6 +295,10 @@ public:
         setbuf(buf, bufn);
     }
 
+	void file( File &file ){
+		m_state.m_file = &file;
+	}
+
 	Filestreambuf &operator=(Filestreambuf &&rhs){
 		m_state = std::move(rhs.m_state);
 		rhs.m_state.m_file = &null_file;
@@ -549,9 +553,17 @@ public:
 	using traits_type = base_type::traits_type;
 
 private:
-	std::unique_ptr<char_type []> m_bufspace;
-	file_type m_file;
-	Filestreambuf<char_type, traits_type> m_sb;	
+	struct State{
+		std::unique_ptr<char_type []> m_bufspace;
+		file_type m_file;
+		Filestreambuf<char_type, traits_type> m_sb;
+		
+		State( char_type *buf = nullptr, file_type &&file = file_type()):
+			m_bufspace(buf),
+			m_file(std::move(file)),
+			m_sb(m_file){}
+
+	} m_state;
 
 public:
 	File_iostream():		
@@ -560,12 +572,17 @@ public:
 
 	File_iostream(file_type &&file, std::streamsize sz = jab::util::Config::io_block_size):
 		base_type(nullptr),
-		m_bufspace( new char_type[sz * 2] ),
-		m_file( std::move(file) ),
-		m_sb( file ){
+		m_state( new char_type[sz * 2], std::move(file) ) {
 
-		m_sb.setbuf( m_bufspace.get(), sz * 2 );
-		this->rdbuf(&m_sb);
+		m_state.m_sb.setbuf( m_state.m_bufspace.get(), sz * 2 );
+		this->rdbuf(&m_state.m_sb);
+	}
+
+	File_iostream &operator=( File_iostream &&rhs ){
+		m_state = std::move(rhs.m_state);
+		m_state.m_sb.file(m_state.m_file);
+		this->rdbuf(&m_state.m_sb);
+		return *this;
 	}
 };
 

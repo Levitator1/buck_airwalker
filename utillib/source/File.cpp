@@ -47,7 +47,7 @@ File::File(File &&rhs){
 
 void File::move_assign(File &&rhs){
 	if(this == &rhs) return;
-    m_state = rhs.m_state;
+    m_state = std::move(rhs.m_state);
     rhs.m_state.m_fd = null_fd;
 }
 

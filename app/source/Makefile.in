@@ -252,10 +252,11 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
+LIBUTIL_PATH = $(top_builddir)/../utillib/source/libutil.a
 baw_SOURCES = main.cpp baw.cpp
-baw_DEPENDENCIES = $(top_builddir)/../utillib
+baw_DEPENDENCIES = $(LIBUTIL_PATH)
 AM_CPPFLAGS = -std=c++2a -I$(srcdir)/../include/
-LDADD = $(top_builddir)/../build/utillib/source/libutil.a
+LDADD = $(LIBUTIL_PATH)
 all: all-am
 
 .SUFFIXES:
@@ -576,6 +577,11 @@ uninstall-am: uninstall-binPROGRAMS
 
 .PRECIOUS: Makefile
 
+
+# Phony so it will always get called and its own makefile decides whether building is needed
+.PHONY: $(LIBUTIL_PATH)
+$(LIBUTIL_PATH):
+	make -C `dirname $(LIBUTIL_PATH)`
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
