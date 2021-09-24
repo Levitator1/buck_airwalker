@@ -1,5 +1,7 @@
 Buck Air Walker
 
+[This is highly work-in-progress and does not do anything interesting yet. Come back later.]
+
 Is a Netrom route discovery tool. It is a program for recursively descending the roots of a 
 Netrom BBS tree, querying each of them for routes, and then generating the requisite "nrparams"
 commands to load the routes into the Linux routing table.
