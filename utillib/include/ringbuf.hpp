@@ -63,6 +63,12 @@ public:
         m_state.m_buffer_end = m_state.m_buffer + sz;        
     }
 
+	//Reinitialize by calling buf() with its previous parameters, which happens to reset the ringbuffer
+	//to the same size, same buffer, but empty.
+	void clear(){
+		buf( m_state.m_buffer, m_state.m_capacity );
+	}
+
     //Pull in n bytes having previously been written to the input range
     //We assume that nobody will ever try to write past the end of the range
     //So, we will check for them writing right up until the end to decide whether to wrap around.

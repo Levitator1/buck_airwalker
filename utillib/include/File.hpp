@@ -83,6 +83,7 @@ public:
     
     operator bool() const;
     operator fd_t() const;
+	std::streamsize tell() const;
     File &operator=(File &&);
     std::streamsize read_exactly(char *data, std::streamsize len);
     void write_exactly(const char *data, std::streamsize len);
@@ -236,29 +237,31 @@ class Filestreambuf : public std::basic_streambuf<Char, Traits> {
     using streamsize = std::streamsize;
 
 	struct State{
-		char_type m_rbuf_bak, m_wbuf_bak; //single-character fallback buffers in case none are provided
-		jab::io::ringbuffer<char_type> m_rbuf, m_wbuf;    
-		File *m_file;
+		char_type rbuf_bak, wbuf_bak; //single-character fallback buffers in case none are provided
+		jab::io::ringbuffer<char_type> rbuf, wbuf;
+		File *file;
+		streamsize rpos=0, wpos=0;
+		bool wrote = false;
 	} m_state;
 
     //Synchronize the streambuf get-pointers with the get-ringbuffer
     void update_gptrs(){
-        this->setg(m_state.m_rbuf.get_begin(), m_state.m_rbuf.get_begin(), m_state.m_rbuf.get_end());
+        this->setg(m_state.rbuf.get_begin(), m_state.rbuf.get_begin(), m_state.rbuf.get_end());
     }
 
     //Synchronize the streambuf put-pointers with the put-ringbuffer
     void update_pptrs(){
-        this->setp( m_state.m_wbuf.put_begin(), m_state.m_wbuf.put_end());
+        this->setp( m_state.wbuf.put_begin(), m_state.wbuf.put_end());
     }
 
     //Commit writes in the buffer window to the ringbuffer
     void commit_wbuf(){
-        m_state.m_wbuf.push( this->pptr() - this->pbase() );
+        m_state.wbuf.push( this->pptr() - this->pbase() );
     }
 
     //Commit reads in the read-buffer window to the ringbuffer
     void commit_rbuf(){
-        m_state.m_rbuf.pop( this->gptr() - this->eback() );
+        m_state.rbuf.pop( this->gptr() - this->eback() );
     }
     
     //These guards commit updates to the user-facing end of the ringbuffer
@@ -297,12 +300,12 @@ public:
     }
 
 	void file( File &file ){
-		m_state.m_file = &file;
+		m_state.file = &file;
 	}
 
 	Filestreambuf &operator=(Filestreambuf &&rhs){
 		m_state = std::move(rhs.m_state);
-		rhs.m_state.m_file = &null_file;
+		rhs.m_state.file = &null_file;
 		return *this;
 	}
 
@@ -314,12 +317,12 @@ public:
     virtual base_type* setbuf (char* s, std::streamsize n) override{
         auto half = n / 2;
         if( half < 1 ){            
-            m_state.m_rbuf.buf(&m_state.m_rbuf_bak, 1);
-            m_state.m_wbuf.buf(&m_state.m_wbuf_bak, 1);            
+            m_state.rbuf.buf(&m_state.rbuf_bak, 1);
+            m_state.wbuf.buf(&m_state.wbuf_bak, 1);            
         }
         else{
-            m_state.m_rbuf.buf(s, half);
-            m_state.m_wbuf.buf(&s[half], half);               
+            m_state.rbuf.buf(s, half);
+            m_state.wbuf.buf(&s[half], half);               
         }   
 
         update_gptrs();
@@ -328,20 +331,36 @@ public:
     }
 
     virtual pos_type seekpos (pos_type pos, std::ios_base::openmode which) override{
+
         if(which == std::ios_base::in){
-            this->setg(this->eback(), this->eback() + pos, this->egptr());
-            return pos;
+			auto p = m_state.rbuf.get_end() + pos - m_state.rpos;
+			if( p >= m_state.rbuf.get_begin() && p < m_State.rbuf.get_end())
+				this->setg( this->eback(), p, this->egptr() );
+			else{
+				m_state.file.seek_exactly( pos, std::ios_base::beg );
+				m_state.rpos = pos;
+				m_state.wrote = false;
+				m_state.rbuf.clear();
+				update_gptrs();
+			}			
         }
 
-        if(which == std::ios_base::out){
-            //This is kind of stupid, but setp resets the current output pointer to the start of the sequence,
-            //so we set setp() to its current position for that side-effect.
-            //So, from there, you can bump pptr() to an absolute position. Otherwise, I don't know how else to
-            //rewind it.
-            this->setp( this->pbase(), this->epptr() );
-            this->pbump( pos );
-        }
-        return pos;
+		if(which == std::ios_base::out){
+			auto p = pos - m_state.wpos;
+			if( p > 0 && p < m_state.wbuf.putavail() ){
+				this->setp( this->pbase(), this->epptr() );
+            	this->pbump( p );	
+			}
+			else{
+				drain_write_buffer();
+				m_state.file.seek_exactly( pos, std::ios_base::beg );
+				m_state.wpos = pos;
+				m_state.wrote = true;
+				m_state.wbuf.clear();
+				update_pptrs();
+			}
+		}		
+		return pos;        
     }
 
     virtual pos_type seekoff(off_type off, std::ios_base::seekdir way, std::ios_base::openmode which) override{
@@ -390,21 +409,35 @@ public:
     }
 private:
     streamsize drain_getbuf( char_type *s, streamsize n ){
-        streamsize ct = std::min((::size_t)n, m_state.m_rbuf.getavail() );
-        std::copy( m_state.m_rbuf.get_begin(), m_state.m_rbuf.get_begin() + ct, s );
-        m_state.m_rbuf.pop(ct);
+        streamsize ct = std::min((::size_t)n, m_state.rbuf.getavail() );
+        std::copy( m_state.rbuf.get_begin(), m_state.rbuf.get_begin() + ct, s );
+        m_state.rbuf.pop(ct);
         return ct;
     }
+
+	//Drain the write buffer until it's either empty or EOF
+	//return the count of characters written
+	streamsize drain_write_buffer(){
+		streamsize sz, ct = 0, tot=0;
+
+		while( sz = m_state.wbuf.size() ){
+			overflow( traits_type::eof() );
+			ct = sz - m_state.wbuf.size();			
+			if(ct == 0)
+				break;
+			else
+				tot+=ct;
+		}
+		return tot;
+	}
 
 public:
     //These next two only pertain to the underlying file and do not affect the buffering state according to the crappy online references.
 	//However, that seems to leave stuff in the buffer when the file closes. So we will flush the streambuf buffer as well.
     virtual int sync() override{        
         try{
-			//Twice becasue the ringbuffer has up to two segments
-			overflow( traits_type::eof() );
-			overflow( traits_type::eof() );
-            m_state.m_file->flush();
+			drain_write_buffer();
+            m_state.file->flush();
             return 0;
         }
         catch(...){
@@ -413,7 +446,7 @@ public:
     }
 
     virtual streamsize showmanyc() override{
-        return m_state.m_file->available();
+        return m_state.file->available();
     }
 
     virtual streamsize xsgetn(char_type* s, streamsize n) override{
@@ -436,9 +469,9 @@ public:
         //buffer underflow case
         if( n > 0 ){            
             //If the buffer will just fill up again, then bulk-read straight into the destination
-            if( n >= m_state.m_rbuf.capacity() ){                
-                ct = m_state.m_file->read(s, n);                
-            }
+            if( n >= m_state.rbuf.capacity() ){
+				ct = do_read(s, n);	
+			}			        
             else{
                 if(this->underflow() != traits_type::eof()){
                     ct = drain_getbuf(s, n);
@@ -455,21 +488,43 @@ public:
 
         GetGuard gg(*this);
 
-        if(m_state.m_rbuf.size() >= m_state.m_rbuf.capacity())
+        if(m_state.rbuf.size() >= m_state.rbuf.capacity())
             return traits_type::eof();
 
-        m_state.m_rbuf.unpop();
-        *m_state.m_rbuf.get_begin() = c;        
+        m_state.rbuf.unpop();
+        *m_state.rbuf.get_begin() = c;        
         return c;
     }
 
 private:
     streamsize fill_wbuf(const char_type* s, streamsize n){        
-        n = std::min( m_state.m_wbuf.putavail(), (::size_t)n);
-        std::copy( s, s+n, m_state.m_wbuf.put_begin() );
-        m_state.m_wbuf.push(n);
+        n = std::min( m_state.wbuf.putavail(), (::size_t)n);
+        std::copy( s, s+n, m_state.wbuf.put_begin() );
+        m_state.wbuf.push(n);
         return n;
     }
+
+	streamsize do_write(const char_type *buf, streamsize n){
+		if( !m_state.wrote ){
+			m_state.file->seek_exactly(m_state.wpos, std::ios_base::beg);
+			m_state.wrote = true;
+		}
+
+		auto ct = m_state.file->write( buf, n );
+		m_state.wpos += ct;
+		return ct;
+	}
+
+	streamsize do_read(char_type *buf, streamsize n){
+		if( m_state.wrote ){
+			m_state.file->seek_exactly(m_state.rpos, std::ios_base::beg);
+			m_state.wrote = false;
+		}
+	
+		auto ct = m_state.file->write( buf, n );
+		m_state.rpos += ct;
+		return ct;
+	}
 
 public:
     virtual streamsize xsputn(const char_type* s, streamsize n) override{
@@ -479,33 +534,33 @@ public:
         PutGuard pg(*this);
 
         //If the buffer is already partially populated than try to fill it
-        if( m_state.m_wbuf.size() ){
+        if( m_state.wbuf.size() ){
             ct = fill_wbuf(s, n);
             s += ct;
             n -= ct;
 
-            if( m_state.m_wbuf.size() >= m_state.m_wbuf.capacity()){
+            if( m_state.wbuf.size() >= m_state.wbuf.capacity()){
                 update_pptrs();
                 overflow( traits_type::eof() );
             }
 
             //If buffer failed to flush, then top it off and finish
-            if(m_state.m_wbuf.size())
+            if(m_state.wbuf.size())
                 return ct + fill_wbuf(s, n);            
         }
 
         //Write buffer should be empty here
 
         //If the buffer is going to overflow anyway, write directly to the file
-        if( n >= m_state.m_wbuf.capacity()){
-            ct2 = m_state.m_file->write(s, n);
+        if( n >= m_state.wbuf.capacity()){
+			ct2 = do_write( s, n );						
             s += ct2;
             n -= ct2;
         }
 
         //Now top off the buffer with any excess and finish        
         return ct + ct2 + fill_wbuf(s, n);        
-    }
+    }	
 
     //TODO: Handle no-op eof character
     virtual int_type overflow (int_type c) override{
@@ -513,19 +568,20 @@ public:
 		::ssize_t ct;
         PutGuard pg(*this);
 
-		auto avail = m_state.m_wbuf.getavail();
+		auto avail = m_state.wbuf.getavail();
 	
 		if(avail){
-        	ct = m_state.m_file->write( m_state.m_wbuf.get_begin(), m_state.m_wbuf.getavail() );
+			ct = do_write( m_state.wbuf.get_begin(), m_state.wbuf.getavail() );			
 			if(ct == 0)
 				return traits_type::eof();
-			else
-				m_state.m_wbuf.pop(ct);
+			else{				
+				m_state.wbuf.pop(ct);
+			}
 		}
         
 		if( c != traits_type::eof() ){
-        	*m_state.m_wbuf.put_begin() = c;
-        	m_state.m_wbuf.push(1); //Not supposed to advance the position
+        	*m_state.wbuf.put_begin() = c;
+        	m_state.wbuf.push(1); //Not supposed to advance the position
 		}
 
 		return traits_type::to_int_type(c);
@@ -533,14 +589,15 @@ public:
 
     virtual int_type underflow() override{
         GetGuard gg(*this);
-        auto space = m_state.m_rbuf.putavail();
-        auto ct = m_state.m_file->read( m_state.m_rbuf.put_begin(), space );
+        auto space = m_state.rbuf.putavail();
+		auto ct = do_read(m_state.rbuf.put_begin(), space);
+
         if(ct == 0)
             return traits_type::eof();
-        
-        m_state.m_rbuf.push(ct);
+
+        m_state.rbuf.push(ct);
         return *m_state.
-		m_rbuf.get_begin();
+		rbuf.get_begin();
     }
 };
 
@@ -556,13 +613,13 @@ public:
 private:
 	struct State{
 		std::unique_ptr<char_type []> m_bufspace;
-		file_type m_file;
+		file_type file;
 		Filestreambuf<char_type, traits_type> m_sb;
 		
 		State( char_type *buf = nullptr, file_type &&file = file_type()):
 			m_bufspace(buf),
-			m_file(std::move(file)),
-			m_sb(m_file){}
+			file(std::move(file)),
+			m_sb(file){}
 
 	} m_state;
 
@@ -581,7 +638,7 @@ public:
 
 	File_iostream &operator=( File_iostream &&rhs ){
 		m_state = std::move(rhs.m_state);
-		m_state.m_sb.file(m_state.m_file);
+		m_state.m_sb.file(m_state.file);
 		this->rdbuf(&m_state.m_sb);
 		return *this;
 	}

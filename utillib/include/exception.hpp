@@ -21,10 +21,11 @@ public:
     AddressRouteTooLong(const std::string &msg);
 };
 
-class IOError : public std::exception{
+class IOError : public std::runtime_error{
 public:
-    using std::exception::exception;
-    virtual const char *what() const noexcept override;
+	IOError( const std::string &msg = "IO Error" );
+    //using std::runtime_error::runtime_error;
+    //virtual const char *what() const noexcept override;
  };
 
 //Throw this with errno set to represent an exception of the POSIX API

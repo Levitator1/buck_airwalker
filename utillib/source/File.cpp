@@ -90,6 +90,10 @@ std::streamsize File::write(const char *data, std::streamsize len){
     return result;
 }
 
+std::streamsize File::tell() const{
+	return const_cast<File *>(this)->seek(0, std::ios_base::cur);
+}
+
 std::streamsize File::seek(std::streamsize pos, std::ios_base::seekdir dir){
 	int dir2;
 
@@ -137,7 +141,7 @@ std::streamsize File::seek_exactly(std::streamsize pos, std::ios_base::seekdir d
 
 	got = seek(want, std::ios_base::beg);
 	if( want != got )
-		throw IOException("seek() returned other than offset sought");
+		throw jab::exception::IOError("seek() returned other than offset sought");
 	else
 		return got;
 }
