@@ -77,6 +77,7 @@ public:
     virtual std::streamsize read(char *data, std::streamsize len);
     virtual std::streamsize write(const char *data, std::streamsize len);
 	virtual std::streamsize seek(std::streamsize pos, std::ios_base::seekdir dir);
+	virtual std::streamsize seek_exactly(std::streamsize pos, std::ios_base::seekdir dir);
     virtual std::streamsize available() const;
     virtual void flush();
     

@@ -111,7 +111,35 @@ std::streamsize File::seek(std::streamsize pos, std::ios_base::seekdir dir){
 	}
 
 	return posix_exception::check( ::lseek(m_state.m_fd, pos, dir2), "Error seeking file", meta::type<IOError>() );	
+}
 
+//seek to an exact position and throw if the offset comes back as anything else
+//I'm not sure in what cases, if any, this would ever seek somewhere other than where requested
+//Maybe if there's insufficient space.
+std::streamsize File::seek_exactly(std::streamsize pos, std::ios_base::seekdir dir){
+
+	std::streamsize want, got;
+
+	switch(dir){
+		case std::ios_base::beg:
+			want = pos;			
+			break;			
+
+		case std::ios_base::cur:
+			want = tell() + pos;
+			break;
+		
+		case std::ios_base::end:
+			auto endi = seek(0, std::ios_base::end);
+			want = endi - pos;
+			break;
+	}
+
+	got = seek(want, std::ios_base::beg);
+	if( want != got )
+		throw IOException("seek() returned other than offset sought");
+	else
+		return got;
 }
 
 void File::write_exactly(const char *data, std::streamsize len){
