@@ -1,10 +1,21 @@
 #pragma once
+#include <optional>
 #include <type_traits>
 #include <functional>
+#include <utility>
+#include <string>
 
 namespace jab{
 namespace util{
 
+//The intersection of two numeric ranges [A, B], [C, D]
+template<typename T>
+std::optional<std::pair<T, T>> range_intersect( T a, T b, T c, T d ){
+	if(a > d || c > b)
+		return {};
+	else
+		return { {std::max(a, c), std::min(b, d)} };
+}
 
 //Allows a single class to offer multiple begin()/end() ranges
 template<class BeginF, class EndF>

@@ -12,7 +12,7 @@
             "intelliSenseMode": "gcc-x64",
             "includePath": [
                 "${myDefaultIncludePath}",
-				"${workspaceFolder}/build",
+				"${workspaceFolder}/../build/utillib",
 				"${workspaceFolder}/include",
 				"${workspaceFolder}/**"
             ],
@@ -20,15 +20,13 @@
             "forcedInclude": [],
             "compilerPath": "${myCompilerPath}",
             "cStandard": "c11",
-            "cppStandard": "c++20",
-            //"compileCommands": "/path/to/compile_commands.json",
+            "cppStandard": "c++20",            
             "browse": {
                 "path": [
                     "${workspaceFolder}",
 					"${workspaceFolder}/include"
                 ],
-                "limitSymbolsToIncludedHeaders": false
-                //"databaseFilename": ""
+                "limitSymbolsToIncludedHeaders": false                
             },
             "configurationProvider": "ms-vscode.makefile-tools"
         }

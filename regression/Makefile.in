@@ -785,7 +785,7 @@ uninstall-am: uninstall-binPROGRAMS
 
 .PHONY: $(LIBUTIL_PATH)
 $(LIBUTIL_PATH):
-	make -C `dirname $(LIBUTIL_PATH)`
+	make -j `nproc` -C `dirname $(LIBUTIL_PATH)`
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

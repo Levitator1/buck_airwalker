@@ -225,6 +225,17 @@ int select(Rfds &&rfds, Wfds &&wfds, Efds &&efds){
     return file::select(rfdsd.get(), wfdsd.get(), efdsd.get(), NULL);
 }
 
+// First of all the C++ streambuf design sucks. It's supposed to be extendable, and it is,
+// but it takes a ridiculous amount of work for something that boils down to a variation of read()/write()
+// on every operating system I've ever used.
+//
+// Anyway, this design seems to assume that the file maintains separate read()/write() pointers. UNICES 
+// have a single lseek() function which seems to position the file for both R/W, so to have separate pointers
+// you have to seek the file (within streambuf) every time you switch from reading to writing or vice versa. Some file types
+// don't support seeking, so in order to do mixed reads and writes on those, you will have to open the file
+// twice and do reads on one instance and writes on the other.
+//
+//
 template< typename Char = char, class Traits = std::char_traits<Char> >
 class Filestreambuf : public std::basic_streambuf<Char, Traits> {
 
@@ -272,6 +283,7 @@ class Filestreambuf : public std::basic_streambuf<Char, Traits> {
         GetGuard( Filestreambuf &buf ):
             m_buf(buf){
                 m_buf.commit_rbuf();
+				m_buf.update_pptrs();
         }
 
         ~GetGuard(){
@@ -279,12 +291,16 @@ class Filestreambuf : public std::basic_streambuf<Char, Traits> {
         }
     };
 
+	//* Ok, it's kind of ridiculous to keep track of what to update when, so rather than do that
+	//Let's just make sure that the guards always leave the streambuf pointers updated, even following init
+	//and that allows the guards to be used recursively because they won't encoutner an inconsistent state
     class PutGuard{
         Filestreambuf &m_buf;
     public:
         PutGuard( Filestreambuf &buf ):
             m_buf(buf){
                 m_buf.commit_wbuf();
+				m_buf.update_pptrs(); //*
         }
 
         ~PutGuard(){
@@ -297,7 +313,7 @@ public:
 		m_state({ 0, 0, {}, {}, &file }){
 
         setbuf(buf, bufn);
-    }
+    }	
 
 	void file( File &file ){
 		m_state.file = &file;
@@ -334,10 +350,10 @@ public:
 
         if(which == std::ios_base::in){
 			auto p = m_state.rbuf.get_end() + pos - m_state.rpos;
-			if( p >= m_state.rbuf.get_begin() && p < m_State.rbuf.get_end())
+			if( p >= m_state.rbuf.get_begin() && p < m_state.rbuf.get_end())
 				this->setg( this->eback(), p, this->egptr() );
 			else{
-				m_state.file.seek_exactly( pos, std::ios_base::beg );
+				m_state.file->seek_exactly( pos, std::ios_base::beg );
 				m_state.rpos = pos;
 				m_state.wrote = false;
 				m_state.rbuf.clear();
@@ -347,13 +363,16 @@ public:
 
 		if(which == std::ios_base::out){
 			auto p = pos - m_state.wpos;
-			if( p > 0 && p < m_state.wbuf.putavail() ){
+
+			//Allow the pending buffer to be revised or appended to
+			//Otherwise drain it out and reposition the file
+			if( p >= 0 && p <= (this->pptr() - this->pbase() ) ){
 				this->setp( this->pbase(), this->epptr() );
             	this->pbump( p );	
 			}
 			else{
 				drain_write_buffer();
-				m_state.file.seek_exactly( pos, std::ios_base::beg );
+				m_state.file->seek_exactly( pos, std::ios_base::beg );
 				m_state.wpos = pos;
 				m_state.wrote = true;
 				m_state.wbuf.clear();
@@ -364,49 +383,32 @@ public:
     }
 
     virtual pos_type seekoff(off_type off, std::ios_base::seekdir way, std::ios_base::openmode which) override{
-        
-        if(which == std::ios_base::in){
-            char_type *newpos;
 
-            switch(way){
-                case std::ios_base::beg:
-                    newpos = this->eback() + off;
-                    break;
+		streamsize abspos;
 
-                case std::ios_base::end:
-                    newpos = this->egptr() - off;
-                    break;
+		switch(way){
+			case std::ios_base::beg:
+				abspos = off;
+				break;
+			
+			case std::ios_base::cur:
+				abspos = (which == std::ios_base::in ? m_state.rpos : m_state.wpos) + off;
+				break;				
 
-                case std::ios_base::cur:
-                    newpos = this->gptr() + off;
-                    break;
-            }
-            this->setg(this->eback(), newpos, this->egptr());
-            return newpos - this->eback();
-        }
+			case std::ios_base::end:
+				drain_write_buffer();
+				m_state.wpos = m_state.file->seek( 0, std::ios_base::end );
+				m_state.wrote = true;
+				abspos = m_state.wpos - off;
+				break;
+				
+			default:
+				throw std::invalid_argument("Unknown seekdir value");
+		}
 
-        if(which == std::ios_base::out){
-            //Convert to an absolute position and just use seekpos
-            pos_type newpos, curpos = this->pptr() - this->pbase();
-
-            switch(way){
-                case std::ios_base::beg:
-                    newpos = off;
-                    break;
-
-                case std::ios_base::end:
-                    newpos = this->epptr() - this->pbase() - off;
-                    break;
-
-                case std::ios_base::cur:
-                    this->pbump(off);
-                    return this->pptr() - this->pbase();
-            }
-
-            return seekpos(newpos, std::ios_base::out);
-        }
-        return this->egptr() - this->eback();
+		return seekpos(abspos, which);
     }
+
 private:
     streamsize drain_getbuf( char_type *s, streamsize n ){
         streamsize ct = std::min((::size_t)n, m_state.rbuf.getavail() );
@@ -417,9 +419,11 @@ private:
 
 	//Drain the write buffer until it's either empty or EOF
 	//return the count of characters written
+	//streambuf put-pointers must be current on entry.
 	streamsize drain_write_buffer(){
 		streamsize sz, ct = 0, tot=0;
 
+		PutGuard guard(*this);
 		while( sz = m_state.wbuf.size() ){
 			overflow( traits_type::eof() );
 			ct = sz - m_state.wbuf.size();			
@@ -435,7 +439,7 @@ public:
     //These next two only pertain to the underlying file and do not affect the buffering state according to the crappy online references.
 	//However, that seems to leave stuff in the buffer when the file closes. So we will flush the streambuf buffer as well.
     virtual int sync() override{        
-        try{
+        try{			
 			drain_write_buffer();
             m_state.file->flush();
             return 0;
@@ -505,9 +509,22 @@ private:
     }
 
 	streamsize do_write(const char_type *buf, streamsize n){
+
 		if( !m_state.wrote ){
 			m_state.file->seek_exactly(m_state.wpos, std::ios_base::beg);
 			m_state.wrote = true;
+		}
+
+		//If the write range should overlap the buffered get range, then update the get-buffer, too
+		const streamsize get0i = m_state.rpos - m_state.rbuf.size(); //file offset of get position 0
+		auto com = jab::util::range_intersect(m_state.wpos, m_state.wpos+n, get0i, m_state.rpos  );
+		if(com){
+			auto i0 = com->first - get0i;			
+			auto n2 = com->second - get0i - i0;
+			auto put_beg = m_state.rbuf.get_begin() + i0;
+			auto from_beg = buf + com->first - m_state.wpos;
+			auto from_end = from_beg + n2;
+			std::copy(from_beg, from_end, put_beg);
 		}
 
 		auto ct = m_state.file->write( buf, n );
@@ -516,7 +533,9 @@ private:
 	}
 
 	streamsize do_read(char_type *buf, streamsize n){
-		if( m_state.wrote ){
+
+		if( m_state.wrote ){			
+			drain_write_buffer();
 			m_state.file->seek_exactly(m_state.rpos, std::ios_base::beg);
 			m_state.wrote = false;
 		}
@@ -596,8 +615,7 @@ public:
             return traits_type::eof();
 
         m_state.rbuf.push(ct);
-        return *m_state.
-		rbuf.get_begin();
+        return traits_type::to_int_type(*m_state.rbuf.get_begin());
     }
 };
 

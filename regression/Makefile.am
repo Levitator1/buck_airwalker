@@ -10,4 +10,4 @@ LDADD = $(LIBUTIL_PATH)
 
 .PHONY: $(LIBUTIL_PATH)
 $(LIBUTIL_PATH):
-	make -C `dirname $(LIBUTIL_PATH)`
+	make -j `nproc` -C `dirname $(LIBUTIL_PATH)`

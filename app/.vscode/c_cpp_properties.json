@@ -22,15 +22,13 @@
             "forcedInclude": [],
             "compilerPath": "${myCompilerPath}",
             "cStandard": "c11",
-            "cppStandard": "c++20",
-            //"compileCommands": "/path/to/compile_commands.json",
+            "cppStandard": "c++20",            
             "browse": {
                 "path": [
                     "${workspaceFolder}",
 					"${workspaceFolder}/include"
                 ],
-                "limitSymbolsToIncludedHeaders": false
-                //"databaseFilename": ""
+                "limitSymbolsToIncludedHeaders": false                
             },
             "configurationProvider": "ms-vscode.makefile-tools"
         }
