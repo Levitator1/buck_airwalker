@@ -229,12 +229,14 @@ int select(Rfds &&rfds, Wfds &&wfds, Efds &&efds){
 // but it takes a ridiculous amount of work for something that boils down to a variation of read()/write()
 // on every operating system I've ever used.
 //
-// Anyway, this design seems to assume that the file maintains separate read()/write() pointers. UNICES 
+// Anyway, this design seems to assume that the file maintains separate read()/write() pointers. Unices 
 // have a single lseek() function which seems to position the file for both R/W, so to have separate pointers
 // you have to seek the file (within streambuf) every time you switch from reading to writing or vice versa. Some file types
-// don't support seeking, so in order to do mixed reads and writes on those, you will have to open the file
-// twice and do reads on one instance and writes on the other.
-//
+// don't support seeking. So, clearly, in order to be compatible with more general UNIX-style file abstractions, something
+// has to give, so we stipulate that all seeks must be R/W rather than single-sided. This way, you can choose not to seek at all
+// and everything works, including non-seekable files. Or, you can seek both read and write pointers at the same time,
+// and that will also work because it's supported by the OS, without presupposing that the file is seekable and having
+// to seek each time you switch R/W or W/R (because the two pointers are always the same).
 //
 template< typename Char = char, class Traits = std::char_traits<Char> >
 class Filestreambuf : public std::basic_streambuf<Char, Traits> {
@@ -250,9 +252,7 @@ class Filestreambuf : public std::basic_streambuf<Char, Traits> {
 	struct State{
 		char_type rbuf_bak, wbuf_bak; //single-character fallback buffers in case none are provided
 		jab::io::ringbuffer<char_type> rbuf, wbuf;
-		File *file;
-		streamsize rpos=0, wpos=0;
-		bool wrote = false;
+		File *file;				
 	} m_state;
 
     //Synchronize the streambuf get-pointers with the get-ringbuffer
@@ -293,7 +293,7 @@ class Filestreambuf : public std::basic_streambuf<Char, Traits> {
 
 	//* Ok, it's kind of ridiculous to keep track of what to update when, so rather than do that
 	//Let's just make sure that the guards always leave the streambuf pointers updated, even following init
-	//and that allows the guards to be used recursively because they won't encoutner an inconsistent state
+	//and that allows the guards to be used recursively because they won't encounter an inconsistent state
     class PutGuard{
         Filestreambuf &m_buf;
     public:
@@ -347,66 +347,20 @@ public:
     }
 
     virtual pos_type seekpos (pos_type pos, std::ios_base::openmode which) override{
-
-        if(which == std::ios_base::in){
-			auto p = m_state.rbuf.get_end() + pos - m_state.rpos;
-			if( p >= m_state.rbuf.get_begin() && p < m_state.rbuf.get_end())
-				this->setg( this->eback(), p, this->egptr() );
-			else{
-				m_state.file->seek_exactly( pos, std::ios_base::beg );
-				m_state.rpos = pos;
-				m_state.wrote = false;
-				m_state.rbuf.clear();
-				update_gptrs();
-			}			
-        }
-
-		if(which == std::ios_base::out){
-			auto p = pos - m_state.wpos;
-
-			//Allow the pending buffer to be revised or appended to
-			//Otherwise drain it out and reposition the file
-			if( p >= 0 && p <= (this->pptr() - this->pbase() ) ){
-				this->setp( this->pbase(), this->epptr() );
-            	this->pbump( p );	
-			}
-			else{
-				drain_write_buffer();
-				m_state.file->seek_exactly( pos, std::ios_base::beg );
-				m_state.wpos = pos;
-				m_state.wrote = true;
-				m_state.wbuf.clear();
-				update_pptrs();
-			}
-		}		
-		return pos;        
+		return seekoff(pos, std::ios_base::beg, which);
     }
 
     virtual pos_type seekoff(off_type off, std::ios_base::seekdir way, std::ios_base::openmode which) override{
 
-		streamsize abspos;
+		if( !(which & std::ios_base::in && which & std::ios_base::out) )
+			throw std::invalid_argument("One-sided seeking is not supported. Must seek in/out simultaneously.");
 
-		switch(way){
-			case std::ios_base::beg:
-				abspos = off;
-				break;
-			
-			case std::ios_base::cur:
-				abspos = (which == std::ios_base::in ? m_state.rpos : m_state.wpos) + off;
-				break;				
-
-			case std::ios_base::end:
-				drain_write_buffer();
-				m_state.wpos = m_state.file->seek( 0, std::ios_base::end );
-				m_state.wrote = true;
-				abspos = m_state.wpos - off;
-				break;
-				
-			default:
-				throw std::invalid_argument("Unknown seekdir value");
-		}
-
-		return seekpos(abspos, which);
+		//For simplicity just flush and purge the buffers
+		//TODO: could be optimized to retain some buffer data when seeking short distances
+		m_state.rbuf.clear();
+		update_gptrs();
+		drain_write_buffer();
+		return m_state.file->seek(off, way);
     }
 
 private:
@@ -419,7 +373,7 @@ private:
 
 	//Drain the write buffer until it's either empty or EOF
 	//return the count of characters written
-	//streambuf put-pointers must be current on entry.
+	//streambuf put-pointers must be current on entry (noted dbefore PutGuard made them current)
 	streamsize drain_write_buffer(){
 		streamsize sz, ct = 0, tot=0;
 
@@ -510,39 +464,15 @@ private:
 
 	streamsize do_write(const char_type *buf, streamsize n){
 
-		if( !m_state.wrote ){
-			m_state.file->seek_exactly(m_state.wpos, std::ios_base::beg);
-			m_state.wrote = true;
-		}
-
-		//If the write range should overlap the buffered get range, then update the get-buffer, too
-		const streamsize get0i = m_state.rpos - m_state.rbuf.size(); //file offset of get position 0
-		auto com = jab::util::range_intersect(m_state.wpos, m_state.wpos+n, get0i, m_state.rpos  );
-		if(com){
-			auto i0 = com->first - get0i;			
-			auto n2 = com->second - get0i - i0;
-			auto put_beg = m_state.rbuf.get_begin() + i0;
-			auto from_beg = buf + com->first - m_state.wpos;
-			auto from_end = from_beg + n2;
-			std::copy(from_beg, from_end, put_beg);
-		}
-
-		auto ct = m_state.file->write( buf, n );
-		m_state.wpos += ct;
-		return ct;
+		//Now, it's not possible for a write to occur to any position buffered in the get-buffer
+		//because with a single file pointer, we are writing after the last position we accessed or sought.
+		//If a seek were to occurr to a previously read position, we would have purged the get buffer
+		//as we do on all seeks, so there is nothing there to update on subsequent write.
+		return m_state.file->write(buf, n);
 	}
 
 	streamsize do_read(char_type *buf, streamsize n){
-
-		if( m_state.wrote ){			
-			drain_write_buffer();
-			m_state.file->seek_exactly(m_state.rpos, std::ios_base::beg);
-			m_state.wrote = false;
-		}
-	
-		auto ct = m_state.file->write( buf, n );
-		m_state.rpos += ct;
-		return ct;
+		return m_state.file->read(buf, n);
 	}
 
 public:

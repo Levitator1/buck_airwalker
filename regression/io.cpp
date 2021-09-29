@@ -95,13 +95,15 @@ void IOTests::run(){
         s = { io_test_file_path,  flags::rw | flags::create, Conf::io_buffer_size};
         eg.ok();
     }
-    //s << "Hi. " << endl << "Testing: " << 123 << ". More testing. Etc. Etc." << endl << endl;
+    s << "Hi. " << endl << "Testing: " << 123 << ". More testing. Etc. Etc." << endl << endl;
 
+	/*
 	IOTestOperationStream opstream( Conf::io_test_seed );
 	IOTestOperation *op = nullptr;
 	for(int i=0; i < Conf::io_test_operations; ++i){
 		op = opstream.get();
 		op->out(s);
 	}
+	*/
 
 }
