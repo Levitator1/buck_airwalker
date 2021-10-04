@@ -8,7 +8,6 @@ namespace levitator{
 namespace concurrency{
 
 //An extension of std::reference_wrapper which implies lock/mutex ownership over its lifetime
-
 template<typename T>
 class locked_ref_base:public std::reference_wrapper<T>{
 

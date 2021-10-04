@@ -6,7 +6,7 @@
 using namespace std;
 
 EllipsisGuard::EllipsisGuard( const string &msg ){
-    cout << msg;
+    cout << msg << std::flush;
 }
 
 EllipsisGuard::~EllipsisGuard(){
