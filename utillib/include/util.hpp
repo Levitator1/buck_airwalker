@@ -1,4 +1,5 @@
 #pragma once
+#include <stdexcept>
 #include <optional>
 #include <type_traits>
 #include <functional>
@@ -7,6 +8,17 @@
 
 namespace jab{
 namespace util{
+
+//emptiest type possible
+struct null_type{};
+
+//Ensure that a narrow string is less than a specified length
+::size_t strnlenlt(const char *str, ::size_t n);
+
+template<::size_t N>
+::size_t strnlenlt( const char str[N] ){
+	return strnlenlt( str, N );
+}
 
 //The intersection of two numeric ranges [A, B], [C, D]
 template<typename T>
@@ -100,6 +112,27 @@ template<typename T, typename U>
 struct copy_const<const T, U>{
     using type = const U;
 };
+
+template<typename T, typename U>
+struct copy_volatile{
+    using type = U;
+};
+
+template<typename T, typename U>
+struct copy_volatile<volatile T, U>{
+    using type = volatile U;
+};
+
+template<typename T, typename U>
+struct copy_cv{
+	using type = typename copy_volatile<T, typename copy_const<T, U>::type>::type;
+};
+
+//Combines the actions of both static_cast and const_cast
+template<typename T, typename U>
+T static_const_cast(U v){
+	return static_cast<T>(const_cast< copy_cv<T, U> >(v));
+}
 
 //T * is what is being cast to (const) char *
 template<typename T>

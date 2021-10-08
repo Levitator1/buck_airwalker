@@ -13,7 +13,7 @@
             "intelliSenseMode": "gcc-x64",
             "includePath": [
                 "${myDefaultIncludePath}",
-				"${workspaceFolder}/../build",
+				"${workspaceFolder}/../build/app",
 				"${workspaceFolder}/include",
 				"${workspaceFolder}/../utillib/include",
 				"${workspaceFolder}/**"

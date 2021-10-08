@@ -108,7 +108,8 @@ libutil_a_AR = $(AR) $(ARFLAGS)
 libutil_a_LIBADD =
 am_libutil_a_OBJECTS = exception.$(OBJEXT) FSFile.$(OBJEXT) \
 	File.$(OBJEXT) Socket.$(OBJEXT) Serial.$(OBJEXT) \
-	util.$(OBJEXT) packet_radio.$(OBJEXT)
+	util.$(OBJEXT) packet_radio.$(OBJEXT) thread_pool.$(OBJEXT) \
+	binary_file.$(OBJEXT)
 libutil_a_OBJECTS = $(am_libutil_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -127,7 +128,8 @@ depcomp = $(SHELL) $(top_srcdir)/../depcomp
 am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = ./$(DEPDIR)/FSFile.Po ./$(DEPDIR)/File.Po \
 	./$(DEPDIR)/Serial.Po ./$(DEPDIR)/Socket.Po \
-	./$(DEPDIR)/exception.Po ./$(DEPDIR)/packet_radio.Po \
+	./$(DEPDIR)/binary_file.Po ./$(DEPDIR)/exception.Po \
+	./$(DEPDIR)/packet_radio.Po ./$(DEPDIR)/thread_pool.Po \
 	./$(DEPDIR)/util.Po
 am__mv = mv -f
 CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
@@ -265,7 +267,7 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 noinst_LIBRARIES = libutil.a
-libutil_a_SOURCES = exception.cpp FSFile.cpp File.cpp Socket.cpp Serial.cpp util.cpp packet_radio.cpp
+libutil_a_SOURCES = exception.cpp FSFile.cpp File.cpp Socket.cpp Serial.cpp util.cpp packet_radio.cpp thread_pool.cpp binary_file.cpp
 noinst_HEADERS = ../include/
 AM_CPPFLAGS = -std=c++2a -I$(srcdir)/../include/
 all: all-am
@@ -320,8 +322,10 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/File.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Serial.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Socket.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/binary_file.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/exception.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/packet_radio.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/thread_pool.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/util.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
@@ -472,8 +476,10 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/File.Po
 	-rm -f ./$(DEPDIR)/Serial.Po
 	-rm -f ./$(DEPDIR)/Socket.Po
+	-rm -f ./$(DEPDIR)/binary_file.Po
 	-rm -f ./$(DEPDIR)/exception.Po
 	-rm -f ./$(DEPDIR)/packet_radio.Po
+	-rm -f ./$(DEPDIR)/thread_pool.Po
 	-rm -f ./$(DEPDIR)/util.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
@@ -524,8 +530,10 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/File.Po
 	-rm -f ./$(DEPDIR)/Serial.Po
 	-rm -f ./$(DEPDIR)/Socket.Po
+	-rm -f ./$(DEPDIR)/binary_file.Po
 	-rm -f ./$(DEPDIR)/exception.Po
 	-rm -f ./$(DEPDIR)/packet_radio.Po
+	-rm -f ./$(DEPDIR)/thread_pool.Po
 	-rm -f ./$(DEPDIR)/util.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic

@@ -6,10 +6,10 @@
         {
             "label": "make",
             "type": "shell",
-            "command": "make -C ../build/utillib -j `nproc`",            
+            "command": "make -C ../build/app -j `nproc`",            
 			"problemMatcher": {
 				"base": "$gcc",
-				"fileLocation": ["relative", "${workspaceFolder}/../build/utillib/source"]
+				"fileLocation": ["relative", "${workspaceFolder}/../build/app/source"]
 			},
             "group": {
                 "kind": "build",

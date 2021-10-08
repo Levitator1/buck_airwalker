@@ -40,6 +40,16 @@ struct is_any<T, U, Args...>:public std::integral_constant<bool, std::is_same<T,
 template<typename T, typename... Args>
 using permit_types = typename std::enable_if<is_any<T, Args...>::value, T>::type;
 
+//Permit rval, lconst, and non-const left refs
+//Suitable for std::forward<>
+//which expects T for rvalues, or T & or const T &
+template<typename T, typename U>
+using permit_gl_ref = permit_types<T, U, const U &, U &>;
+
+//Permit T to be any CV variation of U
+template<typename T, typename U>
+using permit_any_cv = permit_types< T, U, const U, volatile U, const volatile U>;
+
 template<typename T, typename U>
 using const_optional = permit_types<T, U, const U>;
 

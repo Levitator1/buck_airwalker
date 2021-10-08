@@ -3,10 +3,32 @@
 #include <mutex>
 #include <memory>
 #include <functional>
-#include "../functional.hpp"
 
 namespace levitator{
 namespace concurrency{
+
+//An extension of std::reference_wrapper which implies lock/mutex ownership over its lifetime
+template<typename T, class M>
+class locked_ref_base:public std::reference_wrapper<T>{
+
+    using base_type = std::reference_wrapper<T>;
+    std::lock_guard<M> m_guard;    
+
+public:
+    using value_type = T;
+    using mutex_type = M;
+
+    locked_ref_base(value_type &obj, mutex_type &mutex):
+        base_type(obj),
+        m_guard(mutex){}
+};
+
+template<typename T, class M = std::mutex>
+class locked_ref:public locked_ref_base<T,M>{
+public:
+    using locked_ref_base<T,M>::locked_ref_base;
+};
+
 /*
 namespace impl{
     

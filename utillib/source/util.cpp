@@ -1,4 +1,5 @@
 #include <cctype>
+#include <cstring>
 #include <string>
 #include <iomanip>
 #include <sstream>
@@ -6,6 +7,13 @@
 
 using namespace jab::util;
 
+::size_t jab::util::strnlenlt(const char *str, ::size_t n){
+	auto result = ::strnlen(str, n);
+	if(result == n)
+		throw std::invalid_argument("Unterminated string");
+	else
+		return result;
+}
 
 std::string jab::util::hex_format(const std::string &str){
     std::istringstream strin(str);
