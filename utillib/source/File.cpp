@@ -38,7 +38,8 @@ void File::close(){
 }
 
 File::operator bool() const{ return m_state.m_fd != null_fd; }
-File::operator fd_t() const{ return m_state.m_fd; }
+File::fd_t File::fd() const{ return m_state.m_fd; }
+File::operator fd_t() const{ return fd(); }
 
 File::File(File &&rhs){
     m_state = rhs.m_state;

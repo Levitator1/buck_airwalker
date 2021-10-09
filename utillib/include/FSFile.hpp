@@ -10,6 +10,7 @@ class FSFile:public File{
 public:
     FSFile() = default;
     FSFile(const std::filesystem::path &path, int fl);
+	void truncate( std::streamsize sz );
 };
 
 template<typename Char = char, typename Traits = std::char_traits<Char>>

@@ -83,6 +83,7 @@ public:
     
     operator bool() const;
     operator fd_t() const;
+	fd_t fd() const;
 	std::streamsize tell() const;
     File &operator=(File &&);
     std::streamsize read_exactly(char *data, std::streamsize len);

@@ -23,12 +23,14 @@ public:
 };
 
 class callsign_type{
-	char m_callsign[16];
+	char m_callsign[16];	//Must be null-terminated, so max 15 chars
 
 public:
 	callsign_type();
 	callsign_type(const std::string &);
 	void verify() const;
+	const char *c_str() const;
+	std::string str() const;
 };
 
 struct record_start{
@@ -86,17 +88,22 @@ class StateFile{
 	using node_type = state_file_blocks::node;
 	using node_map_type = std::map<std::string, node_type *>;	
 	using node_pointer_type = state_file_blocks::file_ptr<node_type>;
-	
+	using node_list_type = state_file_blocks::header::node_list_type;
+
 	std::fstream m_stream;
 	levitator::binfile::BinaryFile m_bfile;
 	node_map_type m_nodes;
 	std::list<node_type *> m_pending;
+	const std::filesystem::path m_file_path;
+
+	void insert_all_nodes_node(node_type &n);
 
 public:
 	using iterator_type = state_file_blocks::header::node_list_type::iterator_type;
 	using const_iterator_type = state_file_blocks::header::node_list_type::const_iterator_type;
 
 	StateFile( const std::filesystem::path & );
+	~StateFile();
 	const_iterator_type begin() const;
 	const_iterator_type end() const;
 	iterator_type begin();

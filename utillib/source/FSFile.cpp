@@ -1,10 +1,12 @@
 #include <fcntl.h>
 #include <unistd.h>
+#include <string>
 #include "meta.hpp"
 #include "exception.hpp"
 #include "FSFile.hpp"
 
 using namespace std;
+using namespace std::string_literals;
 using namespace jab::file;
 using namespace jab::exception;
 using namespace jab;
@@ -34,4 +36,8 @@ static int do_open( const char *path, int fl ){
 
 FSFile::FSFile(const std::filesystem::path &path, int fl):
     File(do_open(path.native().c_str(), fl)){
+}
+
+void FSFile::truncate(std::streamsize sz){
+	posix_exception::check( ::ftruncate(fd(), sz), "Error truncating file"s, meta::type<IOError>() );
 }
