@@ -8,7 +8,7 @@ make: *** /home/j/project/buck_air_walker/app/build: No such file or directory. 
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Sun Sep 26 10:59:21 2021
+# Make data base, printed on Fri Oct  8 20:43:56 2021
 
 # Variables
 
@@ -17,7 +17,7 @@ GDK_BACKEND = x11
 # environment
 LC_ALL = C
 # environment
-VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-9df42dc3-c397-46f4-888d-310ee33fdeb3.sock
+VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-aac303b6-ce72-4a31-960b-b57f77e31030.sock
 # environment
 VSCODE_CWD = /home/j
 # default
@@ -49,11 +49,11 @@ VSCODE_PIPE_LOGGING = true
 # environment
 APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL = true
 # environment
-SSH_AUTH_SOCK = /tmp/ssh-z7PtBb7hhCGI/agent.1441
+SSH_AUTH_SOCK = /tmp/ssh-im0QczakePBI/agent.1473
 # default
 .SHELLFLAGS := -c
 # environment
-_LXSESSION_PID = 1441
+_LXSESSION_PID = 1473
 # environment
 XDG_CONFIG_DIRS = /etc/xdg
 # environment
@@ -63,7 +63,7 @@ XDG_SESSION_DESKTOP = lightdm-xsession
 # environment
 VSCODE_VERBOSE_LOGGING = true
 # environment
-VSCODE_PID = 3054
+VSCODE_PID = 2148
 # environment
 XDG_SESSION_TYPE = x11
 # environment
@@ -108,6 +108,7 @@ XDG_SEAT_PATH = /org/freedesktop/DisplayManager/Seat0
 DESKTOP_SESSION = LXDE
 # environment
 ORIGINAL_XDG_CURRENT_DESKTOP = LXDE
+ 
 # environment
 GNUMAKEFLAGS := 
 # environment
@@ -123,7 +124,7 @@ USER = j
 # environment
 GTK_MODULES = gail:atk-bridge
 # environment
-SSH_AGENT_PID = 1545
+SSH_AGENT_PID = 1549
 # environment
 _ = /usr/share/code/code
 # environment
@@ -194,7 +195,8 @@ all:
 
 # strcache performance: lookups = 4 / hit rate = 25%
 # hash-table stats:
+ 
 # Load=3/8192=0%, Rehash=0, Collisions=0/4=0%
-# Finished Make data base on Sun Sep 26 10:59:21 2021
+# Finished Make data base on Fri Oct  8 20:43:56 2021
 
  

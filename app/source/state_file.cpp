@@ -1,4 +1,5 @@
 #include <cstring>
+#include "meta.hpp"
 #include "util.hpp"
 #include "state_file.hpp"
 
@@ -37,11 +38,11 @@ void state_file_blocks::record_end::verify() const{
 }
 
 void state_file_blocks::node::verify() const{
-	check_record_ends(*this);		
+	check_record_ends(*this);	
 	callsign.verify();
 }
 
-void state_file_blocks::state_file_header::verify() const{
+void state_file_blocks::header::verify() const{
 	check_record_ends(*this);
 
 	if( std::string( identifier, sizeof(identifier) ) != std::string(identifier_string) )
@@ -54,14 +55,34 @@ void state_file_blocks::state_file_header::verify() const{
 		throw StateFileError("State file version numbers don't match");
 }
 
-
 state::StateFile::StateFile( const std::filesystem::path &path ):
 	m_stream(path, m_stream.binary | m_stream.in | m_stream.out ),
-	m_bfile(m_stream){
+	m_bfile(m_stream, 4096){
 
 	//New/empty file case
-	if(m_bfile.end_offset() == 0){
-		m_bfile.append( state_file_blocks::state_file_header() );
+	if(m_bfile.size() == 0){
+		m_bfile.alloc<state_file_blocks::header>();
 	}
 
+}
+
+template<typename BF, class = jab::meta::permit_any_cv<BF, levitator::binfile::BinaryFile>>
+static auto &fetch_header( BF &bf ){
+	return *bf.template fetch<k3yab::bawns::state_file_blocks::header>(0);
+}
+
+state_file_blocks::header &state::StateFile::header(){
+	return fetch_header(m_bfile);
+}
+
+const state_file_blocks::header &state::StateFile::header() const{
+	return fetch_header(m_bfile);
+}
+
+state::StateFile::const_iterator_type state::StateFile::begin() const{
+	return header::node_list_type::cbegin( &*header().all_node_listp );
+}
+
+state::StateFile::const_iterator_type state::StateFile::end() const{
+	return header::node_list_type::cend( &*header().all_node_listp );
 }

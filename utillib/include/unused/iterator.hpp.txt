@@ -1,0 +1,53 @@
+#pragma once
+#include "util.hpp"
+
+namespace jab::util{
+
+//A default traits type which provides an interface for the iterator
+//to access the elements in a hierarchy for descent
+template<typename T>
+struct breadth_first_iterator_element_traits{
+
+	using inner_iterator_type = decltype( declval<T>().begin() );
+
+	//Given a T obtain a range representing its hierarchical sub-objects
+	static inner_iterator_type begin(T &obj){ return obj.begin(); }
+	static inner_iterator_type begin(const T &obj){ return obj.begin(); }
+	static inner_iterator_type end(T &obj){ return obj.end(); }
+	static inner_iterator_type end(const T &obj){ return obj.end(); }
+};
+
+template<typename T, typename Traits = breadth_first_iterator_element_traits<T>>
+class breadth_first_iterator{
+public:
+	using value_type = T;
+	using element_traits_type = Traits;	//Element accessor traits, not standard iterator traits
+	
+private:
+	using inner_iterator_type = element_traits_type::inner_iterator_type;
+	inner_iterator m_beg0, m_it0, m_end0, m_beg1, m_end1;
+
+public:
+	//Construct the end-iterator. Needs a T in order
+	//to obtain end iterators without assuming default-constructability, which does not seem guaranteed
+	breadth_first_iterator(T &obj, jab::util::null_type):
+		m_beg0(obj.end()),
+		m_end0(m_beg0),
+		m_beg1(m_beg0),
+		m_end1(m_beg0){}
+
+	breadth_first_iterator(T &obj):
+		m_beg0(obj.end()),
+		m_end0(m_beg0),
+		m_beg1(obj.begin()),
+		m_end1(m_beg0){			
+	}
+	
+	//I would rather this not be recursive, but it's way simpler and the recursion level is logarithmic anyway
+	breadth_first_iterator &operator++(){
+
+	}
+
+};
+
+}

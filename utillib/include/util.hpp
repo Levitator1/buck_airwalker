@@ -131,7 +131,13 @@ struct copy_cv{
 //Combines the actions of both static_cast and const_cast
 template<typename T, typename U>
 T static_const_cast(U v){
-	return static_cast<T>(const_cast< copy_cv<T, U> >(v));
+	return static_cast<T>(const_cast< typename copy_cv<T, U>::type >(v));
+}
+
+//Reinterpret and const cast together
+template<typename T, typename U>
+T reinterpret_const_cast(U v){
+	return jab::util::reinterpret_const_cast<T>(const_cast< typename copy_cv<T, U>::type >(v));
 }
 
 //T * is what is being cast to (const) char *

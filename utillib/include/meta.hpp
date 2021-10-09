@@ -47,8 +47,8 @@ template<typename T, typename U>
 using permit_gl_ref = permit_types<T, U, const U &, U &>;
 
 //Permit T to be any CV variation of U
-template<typename T, typename U>
-using permit_any_cv = permit_types< T, U, const U, volatile U, const volatile U>;
+template<typename T, typename U, typename V = std::remove_cv_t<U>>
+using permit_any_cv = permit_types< T, V, const V, volatile V, const volatile V>;
 
 template<typename T, typename U>
 using const_optional = permit_types<T, U, const U>;

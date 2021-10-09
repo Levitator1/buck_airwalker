@@ -2,35 +2,13 @@
 #include <type_traits>
 #include <mutex>
 #include <iostream>
+#include <vector>
 #include "util.hpp"
+#include "meta.hpp"
 #include "concurrency/concurrency.hpp"
 #include "File.hpp"
 
-namespace levitator::util::binfile{
-
-//File position data to be written directly to the file as standard-layout-type
-//It's just a wrapper around an offset, but it conveys type information for type safety
-template<typename T>
-class FilePosition{
-	std::streamoff m_off;
-
-public:	
-	using value_type = T;	
-
-	FilePosition(std::streamoff off = 0):
-		m_off(off){}
-
-	std::streamoff offset() const{
-		return m_off;
-	}
-
-	operator bool() const{
-		return m_off != 0;
-	}
-};
-
-template<typename T>
-class BinaryFilePtr;
+namespace levitator::binfile{
 
 //Just kind of formalizes the idea that we're dealing with a binary file
 //and allows it to be mutex-locked for concurrency
@@ -38,155 +16,87 @@ class BinaryFile{
 	using mutex_type = std::recursive_mutex;
 	using file_ref_type = concurrency::locked_ref<std::iostream, mutex_type>;
 
-	mutex_type m_mutex;
+	mutable mutex_type m_mutex;
 	std::iostream &m_file;
+	std::vector<char> m_cache;
+	std::streampos size_on_disk(); //seeks to the end of the file as a side-effect
+
+	template<typename T, typename This>
+	static auto do_fetch(This *thisp, std::streampos pos){
+		using obj_ptr_type = jab::util::copy_cv<This, T>::type *;
+		auto guard = std::lock_guard(thisp->m_mutex);
+		auto ptr = &thisp->m_cache.front() + pos;
+		return jab::util::reinterpret_const_cast<obj_ptr_type>( ptr );
+	}
 
 public:
+	using size_type = typename decltype(m_cache)::size_type;
 
-	template<typename T>
-	using ptr = BinaryFilePtr<T>;
-
-	BinaryFile( std::iostream &file );
+	BinaryFile( std::iostream &file, std::streamsize initial_capacity = 0 );
 	~BinaryFile();
 	file_ref_type get();
+	size_type size() const;
 
-	template<typename T>
-	ptr<T> fetch( std::streamoff off ){
-		return { *this, off };
-	}
-
-	template<typename T>
-	ptr<T> fetch( const FilePosition<T> &pos ){
-		return fetch<T>( pos.offset() );
-	}
-
-	//lazy store
-	template<typename T>
-	ptr<T> store( std::streamoff off, T &&data ){
-		return { *this, off, std::move(data) };
-	}
-
-	template<typename T>
-	ptr<T> store( const FilePosition<T> &pos, T &&data ){
-		return store<T>( pos.offset(), std::move(data) );
-	}
-
-	std::streampos end_offset(){
+	//Not implementing any concept of a free/reuse store, so there is no free, only allocation/append
+	template<typename T, typename... Args>
+	T *alloc(Args &&... args){
 		auto lock = std::lock_guard(m_mutex);
-		m_file.seekp(0 , std::ios_base::end);
-		return m_file.tellp();
-	}
-
-	template<typename T>
-	ptr<T> append( T &&data ){
-		auto lock = std::lock_guard(m_mutex);
-		auto result = store( end_offset(), std::move(data) );
-		result.store();	//write now so that other appends won't end up in the same position
-		return result;
-	}
-};
-
-//Pointer into a binary file that maintains a cache of the standard-layout object found there
-//and remembers to write it if a non-const view is retrieved.
-//Only as lightweight as the cached object, so don't pass it around trivially. It's a heavy(?) pointer.
-//This could be fixed with heap allocation, but then that's a tradeoff, too.
-//
-//Warning: This assumes that pointer instances never refer to duplicate or overlapping regions
-// this is actually kind of a fatal stipulation which will probably prevent me from using this
-// at all
-template<typename T>
-class BinaryFilePtr {
-
-public:
-	using value_type = T;
-
-private:
-	template<typename U>
-	struct cache_box{
-		mutable U cache;
-	};
-
-	template<typename U>
-	struct cache_box<const U>{
-		const U cache;
-	};
-
-	BinaryFile &m_file;
-	bool m_dirty;
-	std::streamoff m_offset;
-	cache_box<T> m_cache;	//TODO: See what happens if it's mutable const
-
-	BinaryFilePtr( BinaryFile &file, std::streamoff o, value_type &&val, jab::util::null_type ):
-		m_file(file),		
-		m_offset(o),
-		m_cache( { std::move(val) } ){
-
-		//Enable exceptions on IO error
-		auto fref = file.get();
-		fref.get().exceptions( std::iostream::badbit | std::iostream::failbit | std::iostream::eofbit );		
-	}
-
-public:
-	static_assert( std::is_standard_layout_v<value_type>, "BinaryFilePtr can only point to standard-layout types");
-
-	BinaryFilePtr( BinaryFile &file, std::streamoff o):
-		BinaryFilePtr( file, o, {}, jab::util::null_type{} ){
-
-		m_dirty = false;
-		load();
-	}
-
-	BinaryFilePtr( BinaryFile &file, std::streamoff o, value_type &&val):
-		BinaryFilePtr( file, o, std::move(val), jab::util::null_type{} ){
-		
-		m_dirty = true;
-	}
-
-	~BinaryFilePtr(){
-		if(m_dirty)
-			store();
+		m_cache.resize(sizeof(T));
+		auto ptr = &m_cache.back() - sizeof(T) + 1;
+		auto ptr2 = jab::util::reinterpret_const_cast<T *>( ptr );
+		new (ptr2) T( std::forward<Args>(args)... );
+		return ptr2;
 	}
 	
-	void load(){
-		auto fref = m_file.get();
-		fref.get().seekg(m_offset);
-		m_dirty = false;
-		fref.get().read( (char *)&m_cache, sizeof(m_cache) );		
+	template<typename T>
+	T *fetch(std::streampos pos){
+		return do_fetch<T>(this, pos);
 	}
 
-	void store(){
-		auto fref = m_file.get();
-		fref.get().seekp(m_offset);
-		fref.get().write( (const char *)&m_cache, sizeof(m_cache) );
-		m_dirty = false;
-	}
-
-	T &get() const{
-		m_dirty = !std::is_const_v<value_type>;
-		return m_cache;
-	}
-
-	const T &get_const() const{
-		return m_cache;
-	}
-
-	T *operator->() const{		
-		return &get();
-	}
-
-	T &operator*() const{
-		return get();
+	template<typename T>
+	const T *fetch(std::streampos pos) const{
+		return do_fetch<T>(this, pos);
 	}
 };
 
 namespace blocks{
 	template<typename T>
 	struct linked_list;
+
+	template<typename T>
+	class RelPtr;
 }
 
-template<typename T>
-class binary_file_linked_list_iterator{
-	//BinaryFilePtr m_ptr;
+//T is the type the list is declared with
+//U is T with optional CV qualifiers
+template<typename T, typename U>
+class linked_list_iterator{
+public:
+using value_type = U;
+	using list_type = blocks::linked_list<T>;	
+	const list_type *m_linkp;
+
+public:
+	linked_list_iterator(const list_type *linkp = nullptr):
+		m_linkp(linkp){}
+	
+	value_type &operator*() const{
+		return *m_linkp->value_ptr;
+	}
+
+	value_type *operator->() const{
+		return *m_linkp->value_ptr;
+	}
+
+	linked_list_iterator &operator++(){
+		m_linkp = &*m_linkp->next;
+		return *this;
+	}
+
+	bool operator==(const linked_list_iterator &rhs){
+		return m_linkp == rhs.m_linkp;
+	}
+
 };
 
 //Standard-layout chunks that can be stored directly in a binary file
@@ -203,34 +113,59 @@ public:
 	using pointer_type = T *;
 
 	//Takes the pointer type, not T
-	template<typename P>
-	using obj_char_ptr_type = jab::util::copy_cv<P, char *>;	
+	//template<typename P>
+	//using obj_char_ptr_type = typename jab::util::copy_cv<P, char *>::type;	
 
 private:	
 	::ssize_t m_offset;
 
-	template<typename This, typename = jab::meta::permit_any_cv<This, RelPtr<T>> >
-	using this_char_ptr_type = jab::util::copy_cv<This, char *>;
+	//template<typename This, typename = jab::meta::permit_any_cv<This, RelPtr<T>> >
+	//using this_char_ptr_type = typename jab::util::copy_cv<This, char *>::type;
 
-	template<typename U, typename This, typename = jab::meta::permit_any_cv<This, RelPtr<T>> >
-	inline static ::ssize_t make_offset( U *obj, This *th){		
-		auto lhs = jab::util::static_const_cast<obj_char_ptr_type<U *>>(obj);
-		auto rhs = jab::util::static_const_cast< this_char_ptr_type<This> >(th);
-		return lhs - rhs;
+	//Convert an arbitrary pointer to a char pointer of the same cv type;
+	//a pointer to its byte representation
+	template<typename U>
+	static auto to_byte_ptr(U *objp){
+		using voidp_type = typename jab::util::copy_cv<U, void>::type *;
+		using charp_type = typename jab::util::copy_cv<U, char>::type *;
+		return static_cast<charp_type>(reinterpret_cast<voidp_type>(objp));
 	}
 
-	template<typename This, typename = jab::meta::permit_any_cv<This, RelPtr<T>> >
-	static pointer_type make_pointer( This *th, ::size_t offs){		
-		auto thisptr = jab::util::static_const_cast< this_char_ptr_type<This> >(th);
-		return jab::util::static_const_cast< pointer_type >( thisptr + offs );
+	template<typename U, typename This, typename = jab::meta::permit_any_cv<This, RelPtr> >
+	inline static ::ssize_t make_offset( U *obj, This *th){		
+		return to_byte_ptr(obj) - to_byte_ptr(th);
+	}
+
+	//template<typename This, typename = jab::meta::permit_any_cv<This, RelPtr<T>> >
+	//static pointer_type make_pointer( This *th, ::size_t offs){
+	//	return jab::util:static_const_cast<pointer_type>( static_cast<void *>(to_byte_ptr(th) + offs)  );
+	//}
+
+	template< typename This, typename = jab::meta::permit_any_cv<This, RelPtr<T>> >
+	inline static pointer_type make_pointer(This *thisp){
+		using voidp_type = typename jab::util::copy_cv<This, void>::type *;
+		return jab::util::reinterpret_const_cast<pointer_type>( reinterpret_cast<voidp_type>(to_byte_ptr( thisp ) + thisp->offset()) );
+	}
+
+	//Handle the special case where a null pointer is represented via zero-offset or self-reference
+	inline ::size_t copy( const RelPtr &rhs ){
+		if(rhs.offset() == 0)
+			return 0;
+		else
+			return make_offset( rhs.operator->(), this );
 	}
 
 public:
-	inline RelPtr(T *ptr):
-		m_offset( make_offset(ptr, this) ){}
+	//inline RelPtr(T *ptr = this):	//This doesn't work, unsurprisingly
+	inline RelPtr(T *ptr = nullptr):
+		m_offset( ptr ? make_offset(ptr, this) : 0 ){}
 
-	inline RelPtr(const T &rhs):
-		m_offset( make_offset( rhs.operator->(), this ) ){}
+	inline RelPtr(T &obj):
+		RelPtr(&obj){
+	}
+
+	inline RelPtr(const RelPtr &rhs):
+		m_offset( copy(rhs) ){}
 
 	//Move is the same as copying
 	inline RelPtr(T &&rhs):
@@ -238,6 +173,10 @@ public:
 
 	inline ::ssize_t offset() const{
 		return m_offset;
+	}
+
+	inline operator bool() const{
+		return m_offset != 0;
 	}
 
 	//Offset relative to some fixed address, probably usually the start of the file
@@ -248,7 +187,7 @@ public:
 	}
 
 	inline RelPtr &operator=( const RelPtr &rhs ){
-		m_offset = make_offset( rhs.operator->(), this );
+		m_offset = copy(rhs);
 		return *this;
 	}
 
@@ -257,11 +196,11 @@ public:
 	}
 
 	inline pointer_type operator->(){
-		return make_pointer(this, m_offset);
+		return make_pointer(this);
 	}
 
 	inline pointer_type operator->() const{
-		return make_pointer(this, m_offset);
+			return make_pointer(this);
 	}
 
 	inline ref_type operator*(){
@@ -275,12 +214,81 @@ public:
 
 template<typename T>
 struct linked_list{
-	template<typename U>
-	using file_pos = FilePosition<U>;
-
 	using value_type = T;
-	file_pos<value_type> body;
-	file_pos<linked_list<value_type>> next;	
+	using iterator_type = linked_list_iterator<T, T>;
+	using const_iterator_type = linked_list_iterator<T, const T>;
+	RelPtr<value_type> value_ptr;
+	RelPtr<linked_list<value_type>> next;
+	
+private:
+	template<typename U>
+	using permit_this_any_cv_type = jab::meta::permit_any_cv<U, linked_list<T>>;
+
+	template<typename U>
+	using iterator_type_from_this = linked_list_iterator<T, jab::util::copy_cv<U, T>>;
+
+	template<typename U, typename = permit_this_any_cv_type<U> >
+	static auto begin_impl(U *list){
+		using result_type =  iterator_type_from_this<U>;
+		return result_type( list );
+	}
+
+	template<typename U, typename = permit_this_any_cv_type<U> >
+	static auto end_impl(U *list){
+		using result_type =  iterator_type_from_this<U>;
+		return result_type( nullptr );
+	}
+
+public:
+	//Static versions so that you can obtain an empty begin iterator for an empty/non-existant list	
+	static auto begin(linked_list *list){
+		return begin_impl(list);
+	}
+
+	static auto begin(const linked_list *list){
+		return begin_impl(list);
+	}
+
+	static auto cbegin(const linked_list *list){
+		return begin_impl(list);
+	}
+
+	static auto end(linked_list *list){
+		return end_impl(list);
+	}
+
+	static auto end(const linked_list *list){
+		return end_impl(list);
+	}
+
+	static auto cend(const linked_list *list){
+		return end_impl(list);
+	}
+
+	auto begin() const{
+		return begin(this);
+	}
+
+	auto begin(){
+		return begin(this);
+	}
+	
+	auto end() const{
+		return end(this);
+	}
+
+	auto end(){
+		return end(this);
+	}
+
+	auto cbegin() const{
+		return begin(this);
+	}
+
+	auto cend() const{
+		return end(this);
+	}
+
 };
 
 }
