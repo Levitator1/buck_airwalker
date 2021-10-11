@@ -74,9 +74,9 @@ void state_file_blocks::header::verify() const{
 }
 
 void state::StateFile::insert_all_nodes_node( node_type &nd){
-	auto result = m_nodes.insert( { nd.callsign.c_str() , &nd } );
+	auto result = m_nodes.insert( { nd.callsign.c_str() , {&nd, m_bfile} } );
 	if(!result.second)
-		throw StateFileError("There's a duplicate entry in the state file, which means it's corrupt: " + node.callsign.str());
+		throw StateFileError("There's a duplicate entry in the state file, which means it's corrupt: " + nd.callsign.str());
 }
 
 state::StateFile::StateFile( const std::filesystem::path &path ):
@@ -86,21 +86,22 @@ state::StateFile::StateFile( const std::filesystem::path &path ):
 
 	//New/empty file case
 	if(m_bfile.size() == 0){
-		m_bfile.alloc<state_file_blocks::header>();
+		m_bfile.alloc( state_file_blocks::header{} );
 	}
 	else{
+		header().get().verify();
 		//No nodes to process
-		if(!header().all_node_listp)
+		if(!header().get().all_node_listp)
 			return;
 
 		//Post-process an existing file with possible nodes in it
 		//First, build a dictionary of all of the node callsigns so that duplicates can be caught
 		//and while we are at it, we will build a list of those which are incomplete and need visiting.
-		for(auto &node : *header().all_node_listp ){
+		for(auto &node : *header().get().all_node_listp ){
 			insert_all_nodes_node(node);
 
-			if(node.query_count <= 0)
-				m_pending.push_back(&node);
+			if(node.query_count < header().get().visit_serial)
+				m_pending.push_back( {&node, m_bfile });
 		}
 	}
 }
@@ -118,40 +119,57 @@ state::StateFile::~StateFile(){
 }
 
 template<typename BF, class = jab::meta::permit_any_cv<BF, levitator::binfile::BinaryFile>>
-static auto &fetch_header( BF &bf ){
-	return *bf.template fetch<k3yab::bawns::state_file_blocks::header>(0);
+static BinaryFile::locked_ref< typename jab::util::copy_cv<BF, header>::type> fetch_header( BF &bf ){
+	//Lock twice, because we are creating a locked reference for something that could get relocated before the locked reference is created
+	auto lock = bf.make_lock();
+	return bf.make_lock( *bf.template fetch<header>(0) );
 }
 
-state_file_blocks::header &state::StateFile::header(){
+BinaryFile::locked_ref<header> state::StateFile::header(){
 	return fetch_header(m_bfile);
 }
 
-const state_file_blocks::header &state::StateFile::header() const{
+BinaryFile::locked_ref<const header> state::StateFile::header() const{
 	return fetch_header(m_bfile);
 }
 
 state::StateFile::const_iterator_type state::StateFile::begin() const{
-	return header::node_list_type::cbegin( &*header().all_node_listp );
+	return header::node_list_type::cbegin( &*header().get().all_node_listp ).lock( m_bfile.make_lock() );
 }
 
 state::StateFile::const_iterator_type state::StateFile::end() const{
-	return header::node_list_type::cend( &*header().all_node_listp );
+	return header::node_list_type::cend( &*header().get().all_node_listp ).lock( m_bfile.make_lock() );
+}
+
+state::StateFile::iterator_type state::StateFile::begin(){
+	return header::node_list_type::begin( &*header().get().all_node_listp ).lock( m_bfile.make_lock() );
+}
+
+state::StateFile::iterator_type state::StateFile::end(){
+	return header::node_list_type::end( &*header().get().all_node_listp ).lock( m_bfile.make_lock() );
 }
 
 state::StateFile::node_pointer_type state::StateFile::append_node(const std::string &callsign){
 
 	//Update the state file
-	AppendGuard guard(m_bfile);
-	auto nodep = m_bfile.alloc<state_file_blocks::node>(callsign);
-	auto linkp = m_bfile.alloc<header::node_list_type>( nodep, header().all_node_listp);
-	header().all_node_listp = linkp;
+	auto lock = m_bfile.make_lock();
+
+	//auto nodep = m_bfile.alloc<state_file_blocks::node>(callsign);
+	//auto linkp = m_bfile.alloc<header::node_list_type>( nodep, header().all_node_listp);
+	//header().all_node_listp = linkp;
+	auto nodep = m_bfile.list_insert<state_file_blocks::node>( header().get().all_node_listp, callsign );
 
 	//Update table of all nodes
 	insert_all_nodes_node(*nodep);
 
 	//Remember that this node has not been visited
-	m_pending.push_back(nodep);
-	
+	m_pending.push_back( {nodep, m_bfile} );
 	return nodep;
 }
 
+/*
+state::StateFile::node_pointer_type state::StateFile::append_root_node(const std::string &callsign){	
+	//Don't guard here because then you wind up with a list pointing to nothing
+	auto result = append_node(callsign);		
+}
+*/

@@ -3,16 +3,17 @@
 
 using namespace levitator::binfile;
 
-levitator::binfile::AppendGuard::AppendGuard(BinaryFile &f):
+levitator::binfile::BinaryFile::AppendGuard::AppendGuard(BinaryFile &f):
 	m_bf(&f),
-	m_position(f.size()){}
+	m_lock( f.make_lock() ),
+	m_position( f.size() ){}
 
-levitator::binfile::AppendGuard::~AppendGuard(){
+levitator::binfile::BinaryFile::AppendGuard::~AppendGuard(){
 	if(m_bf && m_bf->size() > m_position)
 		m_bf->resize( m_position );
 }
 
-void levitator::binfile::AppendGuard::release(){
+void levitator::binfile::BinaryFile::AppendGuard::release(){
 	m_bf = nullptr;
 }
 
@@ -38,17 +39,19 @@ levitator::binfile::BinaryFile::~BinaryFile(){
 }
 
 void levitator::binfile::BinaryFile::flush(){
+	auto lock = make_lock();
 	m_file.write( &m_cache.front(), m_cache.size() );
 	m_file.flush();	
 }
 
 BinaryFile::size_type BinaryFile::size() const{
+	auto lock = make_lock();
 	return m_cache.size();
 }
 
-levitator::binfile::BinaryFile::file_ref_type levitator::binfile::BinaryFile::get(){
-	return { m_file, m_mutex };
-}
+//levitator::binfile::BinaryFile::file_ref_type levitator::binfile::BinaryFile::get(){
+//	return { m_file, m_mutex };
+//}
 
 std::streamsize levitator::binfile::BinaryFile::size_on_disk_impl() const{	
 	m_file.seekg(0 , std::ios_base::end);
@@ -62,3 +65,4 @@ std::streamsize levitator::binfile::BinaryFile::size_on_disk() const{
 	m_file.seekg(oldpos, std::ios_base::cur);
 	return result;
 }
+

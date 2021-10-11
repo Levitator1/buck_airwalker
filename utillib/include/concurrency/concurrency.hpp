@@ -12,7 +12,7 @@ template<typename T, class M>
 class locked_ref_base:public std::reference_wrapper<T>{
 
     using base_type = std::reference_wrapper<T>;
-    std::lock_guard<M> m_guard;    
+    std::unique_lock<M> m_guard;    
 
 public:
     using value_type = T;

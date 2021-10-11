@@ -5,6 +5,7 @@
 #include <functional>
 #include <utility>
 #include <string>
+#include "meta.hpp"
 
 namespace jab{
 namespace util{
@@ -260,6 +261,124 @@ deconst(T &) -> deconst<T>;
 
 template<typename T>
 deconst(T &&) -> deconst<T &&>;
+
+//Implement operator overloads to delegate operations to T
+//"This" is the derived class. This must be constructable from T for the binary operators to work: This(const T &)
+template<typename T, typename This>
+struct delegate_arithmetic{
+	T *objp;
+
+	static This *upcast(){ return static_cast<This *>(this); }
+	static const This *upcast() const { return static_cast<const This *>(this); }
+
+private:
+	T &value(){ return *objp; }
+	const T &value() const{ return *objp; }
+
+protected:
+
+	template<typename U>
+	using This_or_T = meta::permit_types<U, This, T>;
+
+	delegate_arithmetic(T &v):
+		objp(&v){}
+
+public:
+	operator bool() const{
+		return value();
+	}
+
+	bool operator!() const{
+		return !operator bool();
+	}
+
+	bool operator==( const T &rhs ) const{
+		return value() == rhs;
+	}
+
+	This &operator++(){ 
+		++value();
+		return *upcast();
+	}
+
+	T operator++(int){ 
+		auto prev = *objp;
+		++value();
+		return prev;
+	}
+
+	This &operator--(){ 
+		--value();
+		return *upcast();
+	}
+
+	T operator--(int){ 
+		auto prev = *objp;
+		--value();
+		return prev;
+	}
+
+	This &operator|=(const T &rhs){
+		value() |= rhs;
+		return *upcast();
+	}
+
+	This &operator&=(const T &rhs){
+		value() &= rhs;
+		return *upcast();
+	}
+
+	This operator~() const{
+		return { ~value() };
+	}
+
+	This &operator*=(const T &rhs){
+		value()*=rhs;
+		return *upcast();
+	}
+
+	This &operator/=(const T &rhs){
+		value()/=rhs;
+		return *upcast();
+	}
+
+	This operator+(const T &rhs) const{
+		return { value() + rhs };
+	}
+
+	This operator-(const T &rhs) const{
+		return { value() - rhs };
+	}
+
+	This operator*(const T &rhs) const{
+		return { value() * rhs };
+	}
+
+	This operator/(const T &rhs) const{
+		return { value() / rhs };
+	}
+
+	This operator|(const T &rhs) const{
+		return { value() | rhs };
+	}
+
+	This operator&(const T &rhs) const{
+		return { value() & rhs };
+	}
+
+	This operator^(const T &rhs) const{
+		return { value() ^ rhs; }
+	}
+
+	This operator>>(int rhs) const{
+		return { value() >> rhs };
+	}
+
+	This operator<<(int rhs) const{
+		return { value() << rhs };
+	}
+
+};
 
 }
 }
