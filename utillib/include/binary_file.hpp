@@ -1,10 +1,13 @@
 #pragma once
+#include <cstddef>
 #include <type_traits>
 #include <mutex>
 #include <iostream>
 #include <vector>
 #include "util.hpp"
 #include "meta.hpp"
+#include "address.hpp"
+#include "memory.hpp"
 #include "concurrency/concurrency.hpp"
 #include "File.hpp"
 
@@ -40,7 +43,7 @@ private:
 
 	mutable mutex_type m_mutex;
 	std::iostream &m_file;
-	std::vector<char> m_cache;	
+	std::vector<char, jab::util::aligned_binary_allocator<std::max_align_t>> m_cache;	
 	
 	//Assumes mutex lock is in place
 	template<typename T, typename This>
@@ -71,8 +74,9 @@ private:
 public:
 	using size_type = typename decltype(m_cache)::size_type;
 
+	BinaryFile();
 	BinaryFile( std::iostream &file, std::streamsize initial_capacity = 0 );
-	~BinaryFile();
+	~BinaryFile();	
 
 	//Commits the memory image to disk and flushes the I/O buffers
 	void flush();
@@ -104,13 +108,20 @@ public:
 	template<typename T>
 	auto alloc(T &&obj){
 		using result_type = std::remove_reference<T>::type;
-		const auto sz = sizeof(result_type);
+
+		//Bump size for alignment if necessary
+		auto addr = jab::util::address(m_cache.data());
+		std::size_t sz;
+
+		sz = sizeof(result_type);
+		if(addr){			
+			sz += addr.align_shift();
+		}				
 
 		auto lock = make_lock();
 		m_cache.resize( m_cache.size() + sz);
-		auto ptr = &m_cache.back() - sz + 1;
+		auto ptr = (&*m_cache.end()) - sizeof(result_type);
 		auto ptr2 = jab::util::reinterpret_const_cast<result_type *>( ptr );
-		new (ptr2) result_type( std::forward<T>(obj) );
 		return ptr2;
 	}
 

@@ -123,6 +123,7 @@ public:
 	using iterator_type = state_file_blocks::header::node_list_type::iterator_type::rebind_for_lock< BinaryFile::locked_ref<> >;
 	using const_iterator_type = state_file_blocks::header::node_list_type::const_iterator_type::rebind_for_lock< BinaryFile::const_locked_ref<> >;	
 
+	StateFile();	//uninitialized and invalid state file
 	StateFile( const std::filesystem::path & );
 	~StateFile();
 	const_iterator_type begin() const;

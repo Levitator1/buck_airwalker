@@ -268,8 +268,8 @@ template<typename T, typename This>
 struct delegate_arithmetic{
 	T *objp;
 
-	static This *upcast(){ return static_cast<This *>(this); }
-	static const This *upcast() const { return static_cast<const This *>(this); }
+	This *upcast(){ return static_cast<This *>(this); }
+	const This *upcast() const { return static_cast<const This *>(this); }
 
 private:
 	T &value(){ return *objp; }
@@ -367,7 +367,7 @@ public:
 	}
 
 	This operator^(const T &rhs) const{
-		return { value() ^ rhs; }
+		return { value() ^ rhs };
 	}
 
 	This operator>>(int rhs) const{

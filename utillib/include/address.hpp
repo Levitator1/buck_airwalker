@@ -7,7 +7,8 @@ namespace jab::util{
 using int_address_type = std::uintptr_t;
 
 template<typename T>
-class address:public jab::util::delegate_arithmetic<int_address_type, address>{
+class address:public jab::util::delegate_arithmetic<int_address_type, address<T>>{
+	using base_type = jab::util::delegate_arithmetic<int_address_type, address<T>>;
 	using value_type = T;
 	using pointer_type = value_type *;
 	using int_type = int_address_type;
@@ -28,10 +29,12 @@ public:
 		return reinterpret_cast<pointer_type>(x);
 	}
 
-	address(pointer_type p):
+	address(pointer_type p = nullptr):
+		base_type(m_int),
 		m_int( to_int(p) ){}
 	
 	address(int_type x):
+		base_type(m_int),
 		m_int( x ){}
 
 	int_type to_int() const{
@@ -53,7 +56,7 @@ public:
 
 	//Return a copy of this address having had align_shift() applied
 	address align() const{
-		return { m_int + align_shift(); };
+		return { m_int + align_shift() };
 	}
 
 };

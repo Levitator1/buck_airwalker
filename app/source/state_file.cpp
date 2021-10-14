@@ -79,6 +79,12 @@ void state::StateFile::insert_all_nodes_node( node_type &nd){
 		throw StateFileError("There's a duplicate entry in the state file, which means it's corrupt: " + nd.callsign.str());
 }
 
+std::fstream null_stream;
+
+state::StateFile::StateFile():
+	m_stream(),
+	m_bfile(m_stream, 0){}
+
 state::StateFile::StateFile( const std::filesystem::path &path ):
 	m_stream(path, m_stream.binary | m_stream.in | m_stream.out ),
 	m_bfile(m_stream, 4096),
@@ -98,6 +104,7 @@ state::StateFile::StateFile( const std::filesystem::path &path ):
 		//First, build a dictionary of all of the node callsigns so that duplicates can be caught
 		//and while we are at it, we will build a list of those which are incomplete and need visiting.
 		for(auto &node : *header().get().all_node_listp ){
+			node.verify();
 			insert_all_nodes_node(node);
 
 			if(node.query_count < header().get().visit_serial)
