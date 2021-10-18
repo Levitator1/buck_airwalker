@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <iostream>
 #include <sstream>
+#include "console.hpp"
 #include "io.hpp"
 #include "FSFile.hpp"
 #include "test.hpp"
@@ -10,6 +11,7 @@
 using namespace std;
 using namespace std::string_literals;
 using namespace jab::file;
+using namespace jab::util;
 
 static const filesystem::path io_test_file_path = "test_data.txt";
 static const ::size_t io_test_buffer_size = 12;
@@ -74,7 +76,7 @@ void IOTests::run(){
     FSFile_iostream<char> s;
 
     {
-        EllipsisGuard eg("Openining a test data file...");
+        jab::util::EllipsisGuard eg("Openining a test data file...");
         s = { io_test_file_path,  flags::w | flags::create, Conf::io_buffer_size};
         eg.ok();
     }

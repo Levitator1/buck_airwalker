@@ -74,25 +74,25 @@ void state_file_blocks::header::verify() const{
 }
 
 void state::StateFile::insert_all_nodes_node( node_type &nd){
-	auto result = m_nodes.insert( { nd.callsign.c_str() , {&nd, m_bfile} } );
+	auto result = m_state.nodes.insert( { nd.callsign.c_str() , {&nd, m_state.bfile} } );
 	if(!result.second)
 		throw StateFileError("There's a duplicate entry in the state file, which means it's corrupt: " + nd.callsign.str());
 }
 
 std::fstream null_stream;
 
-state::StateFile::StateFile():
-	m_stream(),
-	m_bfile(m_stream, 0){}
+//state::StateFile::StateFile():
+//	m_stream(),
+//	m_bfile(m_stream, 0){}
 
-state::StateFile::StateFile( const std::filesystem::path &path ):
-	m_stream(path, m_stream.binary | m_stream.in | m_stream.out ),
-	m_bfile(m_stream, 4096),
-	m_file_path(path){
+state::StateFile::StateFile( const std::filesystem::path &path ):m_state{
+	{path, m_state.stream.binary | m_state.stream.in | m_state.stream.out },
+	{m_state.stream, 4096},
+	{path}}{
 
 	//New/empty file case
-	if(m_bfile.size() == 0){
-		m_bfile.alloc( state_file_blocks::header{} );
+	if(m_state.bfile.size() == 0){
+		m_state.bfile.alloc( state_file_blocks::header{} );
 	}
 	else{
 		header().get().verify();
@@ -108,20 +108,20 @@ state::StateFile::StateFile( const std::filesystem::path &path ):
 			insert_all_nodes_node(node);
 
 			if(node.query_count < header().get().visit_serial)
-				m_pending.push_back( {&node, m_bfile });
+				m_state.pending.push_back( {&node, m_state.bfile });
 		}
 	}
 }
 
 state::StateFile::~StateFile(){
 
-	m_bfile.flush();
-	m_stream.close();
+	m_state.bfile.flush();
+	m_state.stream.close();
 
 	//Somewhat awkwardly reopen the file to truncate it if it shrank, which it usually won't
-	if( m_bfile.size() < m_bfile.size_on_disk() ){
-		FSFile tmp(m_file_path, w);
-		tmp.truncate(m_bfile.size());
+	if( m_state.bfile.size() < m_state.bfile.size_on_disk() ){
+		FSFile tmp(m_state.file_path, w);
+		tmp.truncate(m_state.bfile.size());
 	}
 }
 
@@ -133,44 +133,44 @@ static BinaryFile::locked_ref< typename jab::util::copy_cv<BF, header>::type> fe
 }
 
 BinaryFile::locked_ref<header> state::StateFile::header(){
-	return fetch_header(m_bfile);
+	return fetch_header(m_state.bfile);
 }
 
 BinaryFile::locked_ref<const header> state::StateFile::header() const{
-	return fetch_header(m_bfile);
+	return fetch_header(m_state.bfile);
 }
 
 state::StateFile::const_iterator_type state::StateFile::begin() const{
-	return header::node_list_type::cbegin( &*header().get().all_node_listp ).lock( m_bfile.make_lock() );
+	return header::node_list_type::cbegin( &*header().get().all_node_listp ).lock( m_state.bfile.make_lock() );
 }
 
 state::StateFile::const_iterator_type state::StateFile::end() const{
-	return header::node_list_type::cend( &*header().get().all_node_listp ).lock( m_bfile.make_lock() );
+	return header::node_list_type::cend( &*header().get().all_node_listp ).lock( m_state.bfile.make_lock() );
 }
 
 state::StateFile::iterator_type state::StateFile::begin(){
-	return header::node_list_type::begin( &*header().get().all_node_listp ).lock( m_bfile.make_lock() );
+	return header::node_list_type::begin( &*header().get().all_node_listp ).lock( m_state.bfile.make_lock() );
 }
 
 state::StateFile::iterator_type state::StateFile::end(){
-	return header::node_list_type::end( &*header().get().all_node_listp ).lock( m_bfile.make_lock() );
+	return header::node_list_type::end( &*header().get().all_node_listp ).lock( m_state.bfile.make_lock() );
 }
 
 state::StateFile::node_pointer_type state::StateFile::append_node(const std::string &callsign){
 
 	//Update the state file
-	auto lock = m_bfile.make_lock();
+	auto lock = m_state.bfile.make_lock();
 
 	//auto nodep = m_bfile.alloc<state_file_blocks::node>(callsign);
 	//auto linkp = m_bfile.alloc<header::node_list_type>( nodep, header().all_node_listp);
 	//header().all_node_listp = linkp;
-	auto nodep = m_bfile.list_insert<state_file_blocks::node>( header().get().all_node_listp, callsign );
+	auto nodep = m_state.bfile.list_insert<state_file_blocks::node>( header().get().all_node_listp, callsign );
 
 	//Update table of all nodes
 	insert_all_nodes_node(*nodep);
 
 	//Remember that this node has not been visited
-	m_pending.push_back( {nodep, m_bfile} );
+	m_state.pending.push_back( {nodep, m_state.bfile} );
 	return nodep;
 }
 

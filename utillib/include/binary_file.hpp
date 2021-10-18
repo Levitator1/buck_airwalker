@@ -41,18 +41,21 @@ public:
 private:	
 	using file_ref_type = locked_ref<std::iostream>;	
 
-	mutable mutex_type m_mutex;
-	std::iostream &m_file;
-	std::vector<char, jab::util::aligned_binary_allocator<std::max_align_t>> m_cache;	
+	mutable mutex_type mutex;
+
+	struct State{		
+		std::iostream *file;
+		std::vector<char, jab::util::aligned_binary_allocator<char, std::max_align_t>> cache;
+	} m_state;
 	
 	//Assumes mutex lock is in place
 	template<typename T, typename This>
 	static auto do_fetch(This *thisp, std::streampos pos){
-		using obj_ptr_type = jab::util::copy_cv<This, T>::type *;
-		auto guard = std::lock_guard(thisp->m_mutex);
-		auto ptr = &thisp->m_cache.front() + pos;
+		using obj_ptr_type = typename jab::util::copy_cv<This, T>::type *;
+		auto guard = std::lock_guard(thisp->mutex);
+		auto ptr = &thisp->m_state.cache.front() + pos;
 		return jab::util::reinterpret_const_cast<obj_ptr_type>( ptr );
-	}	
+	}
 
 	//Not really logically or effectively const, so don't use it that way
 	std::streamsize size_on_disk_impl() const; //seeks to the end of the file as a side-effect
@@ -72,11 +75,13 @@ private:
 	};
 
 public:
-	using size_type = typename decltype(m_cache)::size_type;
+	using size_type = typename decltype(m_state.cache)::size_type;
 
 	BinaryFile();
 	BinaryFile( std::iostream &file, std::streamsize initial_capacity = 0 );
-	~BinaryFile();	
+	~BinaryFile();
+
+	BinaryFile &operator=( BinaryFile &&rhs );
 
 	//Commits the memory image to disk and flushes the I/O buffers
 	void flush();
@@ -85,7 +90,7 @@ public:
 	//Then call make_lock() to make the locked reference after you have already secured ref.
 	template<typename U>
 	locked_ref<U> make_lock(U &ref) const{
-		return {ref, m_mutex};		
+		return {ref, mutex};		
 	}
 	
 	locked_ref<const BinaryFile> make_lock() const{
@@ -97,7 +102,7 @@ public:
 	}
 
 	locked_ref<std::iostream> get_stream() const{
-		return make_lock(m_file);
+		return make_lock(*m_state.file);
 	}
 
 	//file_ref_type get(); //Return the file stream wrapped in a reference holding a scoped-lock
@@ -107,10 +112,10 @@ public:
 	//Not implementing any concept of a free/reuse store, so there is no free, only allocation/append
 	template<typename T>
 	auto alloc(T &&obj){
-		using result_type = std::remove_reference<T>::type;
+		using result_type = typename std::remove_reference<T>::type;
 
 		//Bump size for alignment if necessary
-		auto addr = jab::util::address(m_cache.data());
+		auto addr = jab::util::address(m_state.cache.data());
 		std::size_t sz;
 
 		sz = sizeof(result_type);
@@ -119,8 +124,8 @@ public:
 		}				
 
 		auto lock = make_lock();
-		m_cache.resize( m_cache.size() + sz);
-		auto ptr = (&*m_cache.end()) - sizeof(result_type);
+		m_state.cache.resize( m_state.cache.size() + sz);
+		auto ptr = (&*m_state.cache.end()) - sizeof(result_type);
 		auto ptr2 = jab::util::reinterpret_const_cast<result_type *>( ptr );
 		return ptr2;
 	}
@@ -128,7 +133,7 @@ public:
 	//resize the file to a length of n bytes
 	void resize(std::streamsize n){
 		auto lock = make_lock();
-		m_cache.resize(n);
+		m_state.cache.resize(n);
 	}
 
 	//Shrink the file by n bytes. Closest thing to a concept of freeing.

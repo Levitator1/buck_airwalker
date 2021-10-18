@@ -8,7 +8,7 @@ make: *** /home/j/project/buck_air_walker/app/build: No such file or directory. 
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Sun Oct 10 14:41:50 2021
+# Make data base, printed on Sat Oct 16 04:59:44 2021
 
 # Variables
 
@@ -17,7 +17,7 @@ GDK_BACKEND = x11
 # environment
 LC_ALL = C
 # environment
-VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-af6dad3c-bb14-48f4-aeca-bc353e24d6c7.sock
+VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-f78b05d2-21a9-475d-9af1-c7f28968f2e1.sock
 # environment
 VSCODE_CWD = /home/j
 # default
@@ -49,11 +49,11 @@ VSCODE_PIPE_LOGGING = true
 # environment
 APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL = true
 # environment
-SSH_AUTH_SOCK = /tmp/ssh-6herj7rNzaTA/agent.1423
+SSH_AUTH_SOCK = /tmp/ssh-9xs7OzqQ9iNl/agent.1395
 # default
 .SHELLFLAGS := -c
 # environment
-_LXSESSION_PID = 1423
+_LXSESSION_PID = 1395
 # environment
 XDG_CONFIG_DIRS = /etc/xdg
 # environment
@@ -63,7 +63,7 @@ XDG_SESSION_DESKTOP = lightdm-xsession
 # environment
 VSCODE_VERBOSE_LOGGING = true
 # environment
-VSCODE_PID = 1928
+VSCODE_PID = 1697
 # environment
 XDG_SESSION_TYPE = x11
 # environment
@@ -123,7 +123,7 @@ USER = j
 # environment
 GTK_MODULES = gail:atk-bridge
 # environment
-SSH_AGENT_PID = 1534
+SSH_AGENT_PID = 1487
 # environment
 _ = /usr/share/code/code
 # environment
@@ -148,6 +148,7 @@ MATHEMATICA_HOME = /opt/Wolfram/WolframEngine/12.3
 XDG_SESSION_ID = 2
 # default
 .RECIPEPREFIX := 
+ 
 # environment
 XDG_GREETER_DATA_DIR = /var/lib/lightdm/data/j
 # default
@@ -159,7 +160,6 @@ GDMSESSION = lightdm-xsession
 # variable set hash-table stats:
 # Load=72/1024=7%, Rehash=0, Collisions=5/76=7%
 
- 
 # Pattern-specific Variable Values
 
 # No pattern-specific variable values.
@@ -196,6 +196,6 @@ all:
 # strcache performance: lookups = 4 / hit rate = 25%
 # hash-table stats:
 # Load=3/8192=0%, Rehash=0, Collisions=0/4=0%
-# Finished Make data base on Sun Oct 10 14:41:50 2021
+# Finished Make data base on Sat Oct 16 04:59:44 2021
 
  

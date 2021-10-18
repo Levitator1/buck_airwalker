@@ -3,39 +3,48 @@
     // for the documentation about the tasks.json format
     "version": "2.0.0",
     "tasks": [
-        {
-            "label": "make",
-            "type": "shell",
-            "command": "make -C ../build/app -j `nproc`",            
+		{
+			"label": "make app",
+			"type": "shell",
+			"command": "make -C ../build/app -j `nproc`",
 			"problemMatcher": {
 				"base": "$gcc",
-				"fileLocation": ["relative", "${workspaceFolder}/../build/app/source"]
+				"fileLocation": [
+					"relative",
+					"${workspaceFolder}/../build/app/source"
+				]
 			},
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            }
-        },
-        {
-            "label": "Autoreconf",
-            "type": "shell",
-            "command": "autoreconf -f -i; cd build;../configure",
-            "problemMatcher": ["$gcc"],
-            "group": "build"
-        },
-        {
-            "label": "configure",
-            "type": "shell",
-            "command": "cd build;../configure",
-            "problemMatcher": ["$gcc"],
-            "group": "build"
-        },
-        {
-            "label": "Clean",
-            "type": "shell",
-            "command": "cd build;make clean",
-            "problemMatcher": ["$gcc"],
-            "group": "none"
-        }
-    ]
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		},
+		{
+			"label": "Autoreconf",
+			"type": "shell",
+			"command": "autoreconf -f -i; cd build;../configure",
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "configure",
+			"type": "shell",
+			"command": "cd build;../configure",
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Clean",
+			"type": "shell",
+			"command": "cd build;make clean",
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "none"
+		}
+	]
 }

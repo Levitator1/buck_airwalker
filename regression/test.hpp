@@ -2,16 +2,6 @@
 #include <string>
 #include "exception.hpp"
 
-//Says something...
-//and then commit to saying "FAILED" unless notified to say "OK"
-class EllipsisGuard{
-    bool m_ok = false;
-public:
-    EllipsisGuard(const std::string &msg);
-    ~EllipsisGuard();
-    void ok();
-};
-
 //A deterministic stream of random integers
 //Implemented with the global C RNG, so it will alter its state
 class RandStream{

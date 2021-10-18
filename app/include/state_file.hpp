@@ -111,11 +111,13 @@ class StateFile{
 	using node_list_type = state_file_blocks::header::node_list_type;
 	using BinaryFile = levitator::binfile::BinaryFile;
 
-	std::fstream m_stream;
-	BinaryFile m_bfile;
-	node_map_type m_nodes;
-	std::list<StateOffsetPtr<node_type>> m_pending;
-	const std::filesystem::path m_file_path;
+	struct State{
+		std::fstream stream;
+		BinaryFile bfile;
+		std::filesystem::path file_path;
+		node_map_type nodes;
+		std::list<StateOffsetPtr<node_type>> pending;		
+	} m_state;
 
 	void insert_all_nodes_node(node_type &n);
 
@@ -123,9 +125,11 @@ public:
 	using iterator_type = state_file_blocks::header::node_list_type::iterator_type::rebind_for_lock< BinaryFile::locked_ref<> >;
 	using const_iterator_type = state_file_blocks::header::node_list_type::const_iterator_type::rebind_for_lock< BinaryFile::const_locked_ref<> >;	
 
-	StateFile();	//uninitialized and invalid state file
+	//StateFile();	//uninitialized and invalid state file
+	StateFile() = default;
 	StateFile( const std::filesystem::path & );
 	~StateFile();
+	StateFile &operator=( StateFile && ) = default;	
 	const_iterator_type begin() const;
 	const_iterator_type end() const;
 	iterator_type begin();

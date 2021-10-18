@@ -41,7 +41,6 @@ public:
     }
 };
 
-
 //So this works like a reference to an ostream which locks it exclusively until discarded
 //And it also forwards the insertion operator
 template<typename T, class Tr = std::char_traits<T>, class M = std::mutex>
@@ -69,7 +68,3 @@ public:
 
 }
 }
-
-
-
-

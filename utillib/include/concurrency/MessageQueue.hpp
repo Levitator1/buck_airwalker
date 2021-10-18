@@ -41,17 +41,24 @@ class MessageQueue{
 	};
 
 public:
-
-	template<typename U, typename = jab::meta::permit_gl_ref<U, message_type> >
-    void push_back( U &&msg){
+    void push_back( message_type &&msg){
         MutateGuard(*this);
-        m_messages.push_back( std::forward<U>(msg));        
+        m_messages.push_back( std::move(msg));        
     }
-	
-	template<typename U, typename = jab::meta::permit_gl_ref<U, message_type> >
-	void push_front( U &&msg ){
+
+	void push_back( const message_type &msg){
         MutateGuard(*this);
-        m_messages.push_front( std::forward<U>(msg));        
+        m_messages.push_back( msg);        
+    }
+		
+	void push_front( message_type &&msg ){
+        MutateGuard(*this);
+        m_messages.push_front( std::move(msg));        
+    }
+
+	void push_front( const message_type &msg ){
+        MutateGuard(*this);
+        m_messages.push_front( msg );
     }
 
     message_type pop(){

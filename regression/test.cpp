@@ -5,18 +5,6 @@
 
 using namespace std;
 
-EllipsisGuard::EllipsisGuard( const string &msg ){
-    cout << msg << std::flush;
-}
-
-EllipsisGuard::~EllipsisGuard(){
-    cout << (m_ok ? "OK" : "FAILED") << endl;
-}
-
-void EllipsisGuard::ok(){
-    m_ok = true;
-}
-
 RandStream::RandStream(value_type seed):
 	m_seed(seed){}
 

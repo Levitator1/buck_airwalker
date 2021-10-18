@@ -10,6 +10,72 @@
 namespace jab{
 namespace util{
 
+namespace impl{
+
+template<typename T, bool has_move = std::is_move_assignable_v<T>>
+struct move_or_copy_impl{
+	using value_type = const std::remove_reference_t<T>;
+	using input_ref_type = value_type &;
+	using result_ref_type = value_type &;
+	static constexpr bool moves = false;
+	
+	static result_ref_type pass(input_ref_type v){
+		return v;
+	}
+
+};
+
+template<typename T>
+struct move_or_copy_impl<T, true>{
+	using value_type = std::remove_reference_t<T>;
+	using input_ref_type = value_type &;
+	using result_ref_type = value_type &&;
+	static constexpr bool moves = true;
+	
+	static result_ref_type pass(input_ref_type v){
+		return std::move(v);
+	}
+};
+
+}
+
+//Move something if it is movable, preferring move, or fall back to copying otherwise
+//Well, this doesn't actually take any action. It works like a conditional version of std::move(),
+//which instead sometimes returns a move-reference and other times a const reference.
+template<typename T>
+class move_or_copy : public impl::move_or_copy_impl<T>{
+
+	using base_type = impl::move_or_copy_impl<T>;	
+	using value_type = typename base_type::value_type;
+	value_type *m_obj;
+	
+public:
+	using input_ref_type = typename base_type::input_ref_type;
+	using result_ref_type = typename base_type::result_ref_type;
+
+	move_or_copy():
+		m_obj(nullptr){}
+
+	move_or_copy( input_ref_type v ):
+		m_obj(&v){}
+
+	result_ref_type pass() const{
+		return base_type::pass(*m_obj);
+	}
+
+	result_ref_type operator()() const{
+		return pass();
+	}
+
+	operator result_ref_type() const{
+		return pass();
+	}
+
+};
+
+template<typename T>
+move_or_copy( T &&v ) -> move_or_copy< std::remove_reference_t<T> >;
+
 //emptiest type possible
 struct null_type{};
 
@@ -379,6 +445,7 @@ public:
 	}
 
 };
+
 
 }
 }

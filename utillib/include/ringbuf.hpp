@@ -40,8 +40,8 @@ public:
 			++m_pos;
 
 			//Roll over at the end of the linear buffer
-			if(m_pos >= m_rb.m_state.m_buffer_end)
-				m_pos = m_rb.m_state.m_buffer;
+			if(m_pos >= m_rb->m_state.m_buffer_end)
+				m_pos = m_rb->m_state.m_buffer;
 
 			//Detect sequence end when the position wraps around to the head so that
 			//we can distinguish the beginning from past-the-end
@@ -53,15 +53,15 @@ public:
 
 		iterator &operator+(streamsize n){
 			auto p = m_pos + n;
-			if(p >= m_rb.m_state.m_buffer_end){
-				auto n2 = m_rb.m_state.m_bufffer_end - m_pos;
+			if(p >= m_rb->m_state.m_buffer_end){
+				auto n2 = m_rb->m_state.m_bufffer_end - m_pos;
 				p-= n2;				
 			}
 			return { *this, p,  m_pos == m_initial && n};
 		}
 
 		bool operator==(const iterator &rhs) const{
-			return m_pos == rhs.m_pos && m_rolled_over == m_rolled_over;
+			return m_pos == rhs.m_pos && m_rolled_over == rhs.m_rolled_over;
 		}
 
 		value_type &operator*() const{

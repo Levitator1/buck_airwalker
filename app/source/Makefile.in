@@ -275,8 +275,8 @@ top_srcdir = @top_srcdir@
 LIBUTIL_PATH = $(top_builddir)/../utillib/source/libutil.a
 baw_SOURCES = main.cpp baw.cpp BawConfig.cpp state_file.cpp
 baw_DEPENDENCIES = $(LIBUTIL_PATH)
-AM_CPPFLAGS = -std=c++2a -I$(srcdir)/../../utillib/include/ -I$(srcdir)/../include/ -I$(srcdir)/../
-LDADD = $(LIBUTIL_PATH) -lpthread
+AM_CPPFLAGS = -std=c++2a -Wno-subobject-linkage -I$(srcdir)/../../utillib/include/ -I$(srcdir)/../include/ -I$(srcdir)/../
+LDADD = $(LIBUTIL_PATH) -lstdc++ -lpthread
 all: all-am
 
 .SUFFIXES:
@@ -607,7 +607,7 @@ uninstall-am: uninstall-binPROGRAMS
 # Phony so it will always get called and its own makefile decides whether building is needed
 .PHONY: $(LIBUTIL_PATH)
 $(LIBUTIL_PATH):
-	make -C `dirname $(LIBUTIL_PATH)`
+	make -j `nproc` -C `dirname $(LIBUTIL_PATH)`
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

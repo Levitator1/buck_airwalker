@@ -244,10 +244,10 @@ class Filestreambuf : public std::basic_streambuf<Char, Traits> {
 
     using base_type = std::basic_streambuf<Char, Traits>;
     using char_type = Char;    
-    using pos_type = base_type::pos_type;
-    using off_type = base_type::off_type;
-    using traits_type = base_type::traits_type;    
-    using int_type = base_type::int_type;
+    using pos_type = typename base_type::pos_type;
+    using off_type = typename base_type::off_type;
+    using traits_type = typename base_type::traits_type;    
+    using int_type = typename base_type::int_type;
     using streamsize = std::streamsize;
 
 	struct State{
@@ -379,7 +379,7 @@ private:
 		streamsize sz, ct = 0, tot=0;
 
 		PutGuard guard(*this);
-		while( sz = m_state.wbuf.size() ){
+		while( (sz = m_state.wbuf.size()) ){
 			overflow( traits_type::eof() );
 			ct = sz - m_state.wbuf.size();			
 			if(ct == 0)
@@ -556,8 +556,8 @@ class File_iostream : public std::basic_iostream<Ch, Traits>{
 
 public:
 	using file_type = File;
-	using char_type = base_type::char_type;
-	using traits_type = base_type::traits_type;
+	using char_type = typename base_type::char_type;
+	using traits_type = typename base_type::traits_type;
 
 private:
 	struct State{
