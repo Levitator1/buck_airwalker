@@ -27,10 +27,11 @@ public:
 
 //A thread pool task that visits a node
 class node_task{
-	baw &m_app;
+	baw *m_appp;
 	std::string m_callsign;
 
 public:
+	node_task(); //terminate
 	node_task( baw &app, const std::string &call);
 	int operator()();
 };

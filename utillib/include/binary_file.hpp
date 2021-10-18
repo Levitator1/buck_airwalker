@@ -67,7 +67,6 @@ private:
 		locked_ref<BinaryFile> m_lock;
 		std::streamoff m_position;
 		
-
 	public:
 		AppendGuard(BinaryFile &file);
 		~AppendGuard();
@@ -85,6 +84,10 @@ public:
 
 	//Commits the memory image to disk and flushes the I/O buffers
 	void flush();
+
+	operator bool() const{
+		return m_state.file;
+	}
 
 	//If ref is relocatable make sure to lock before you retrieve ref!
 	//Then call make_lock() to make the locked reference after you have already secured ref.
@@ -113,21 +116,21 @@ public:
 	template<typename T>
 	auto alloc(T &&obj){
 		using result_type = typename std::remove_reference<T>::type;
+		auto lock = make_lock();
 
-		//Bump size for alignment if necessary
-		auto addr = jab::util::address(m_state.cache.data());
+		//pad size for alignment if necessary
+		auto addr = jab::util::address( reinterpret_cast<T *>(m_state.cache.data()) );
 		std::size_t sz;
 
 		sz = sizeof(result_type);
 		if(addr){			
 			sz += addr.align_shift();
 		}				
-
-		auto lock = make_lock();
+		
 		m_state.cache.resize( m_state.cache.size() + sz);
 		auto ptr = (&*m_state.cache.end()) - sizeof(result_type);
 		auto ptr2 = jab::util::reinterpret_const_cast<result_type *>( ptr );
-		return ptr2;
+		return new(ptr2) result_type(obj);
 	}
 
 	//resize the file to a length of n bytes
@@ -141,6 +144,8 @@ public:
 		auto lock = make_lock();	
 		resize( size() - n );
 	}
+
+	void file( std::iostream &stream );
 
 	template<typename T>
 	T *fetch(std::streampos pos){
@@ -260,6 +265,7 @@ public:
 	using traits_type = Traits;
 	using ref_type = T &;
 	using pointer_type = T *;
+	using cv_pointer_type = const volatile T *;
 
 	//Takes the pointer type, not T
 	//template<typename P>
@@ -293,6 +299,7 @@ private:
 	//	return jab::util:static_const_cast<pointer_type>( static_cast<void *>(to_byte_ptr(th) + offs)  );
 	//}
 
+	/*
 	template< typename This, typename = jab::meta::permit_any_cv<This, RelPtr> >
 	inline static pointer_type make_pointer(This *thisp){
 		using voidp_type = typename jab::util::copy_cv<This, void>::type *;
@@ -300,6 +307,14 @@ private:
 
 		auto thisp2 = static_cast<this_type *>(thisp);
 		return jab::util::reinterpret_const_cast<pointer_type>( reinterpret_cast<voidp_type>(to_byte_ptr( traits_type::base_ptr(*thisp2) ) + thisp->offset()) );
+	}
+	*/
+
+	inline pointer_type make_pointer() const{
+		auto thisc = reinterpret_cast<const volatile char *>(this);
+		auto p = thisc + offset();
+		auto p2 = reinterpret_cast<cv_pointer_type>(p);
+		return const_cast<pointer_type>(p2);
 	}
 
 	//Handle the special case where a null pointer is represented via zero-offset or self-reference
@@ -351,11 +366,11 @@ public:
 	}
 
 	inline pointer_type operator->(){
-		return make_pointer(this);
+		return make_pointer();
 	}
 
 	inline pointer_type operator->() const{
-			return make_pointer(this);
+			return make_pointer();
 	}
 
 	inline ref_type operator*(){
@@ -407,7 +422,7 @@ struct linked_list{
 	using const_iterator_type = linked_list_iterator<T, const T>;
 	RelPtr<value_type> value_ptr;
 	RelPtr<linked_list> next;
-	
+
 public:
 	linked_list( const RelPtr<value_type> &val, const RelPtr<linked_list> &nx ):
 		value_ptr(val),

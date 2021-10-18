@@ -195,16 +195,29 @@ struct copy_cv{
 	using type = typename copy_volatile<T, typename copy_const<T, U>::type>::type;
 };
 
+template<typename T, typename U>
+using copy_cv_t = typename copy_cv<T,U>::type;
+
 //Combines the actions of both static_cast and const_cast
+//On some systems read-only objects are in their own address space, but that doesn't necessarily
+//map directly to constness because you can const a pointer or reference to a non-const thing without moving it.
+//So we just cast away without any regard to CV qualifiers.
 template<typename T, typename U>
 T static_const_cast(U v){
-	return static_cast<T>(const_cast< typename copy_cv<T, U>::type >(v));
+
+	//Silently convert to most qualified form of T.
+	///Then const-cast away unnneeded qualifiers
+	using V = std::add_cv_t<T>;
+
+	return const_cast<T>(static_cast<V>(v));	
 }
 
 //Reinterpret and const cast together
 template<typename T, typename U>
 T reinterpret_const_cast(U v){
-	return jab::util::reinterpret_const_cast<T>(const_cast< typename copy_cv<T, U>::type >(v));
+	
+	using V = jab::util::copy_cv_t<decltype(v), T>;
+	return const_cast<T>(reinterpret_cast<V>(v));	
 }
 
 //T * is what is being cast to (const) char *

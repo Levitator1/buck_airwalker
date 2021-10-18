@@ -23,7 +23,8 @@ levitator::binfile::BinaryFile::BinaryFile():
 levitator::binfile::BinaryFile::BinaryFile( std::iostream &stream, std::streamsize initial_size ):m_state{ &stream }{
 	//:m_file(stream){	
 
-	stream.exceptions( std::iostream::badbit | std::iostream::failbit | std::iostream::eofbit );
+	//stream.exceptions( std::iostream::badbit | std::iostream::failbit | std::iostream::eofbit );
+	stream.exceptions( std::iostream::badbit | std::iostream::failbit );
 	auto sz = size_on_disk();	
 
 	//New/empty file case
@@ -31,7 +32,9 @@ levitator::binfile::BinaryFile::BinaryFile( std::iostream &stream, std::streamsi
 		m_state.cache.reserve(initial_size);
 	else{
 		//Read the entire file image into cache vector
-		m_state.file->read( &m_state.cache.front(), sz );
+		m_state.cache.resize(sz);
+		m_state.file->seekg(0);
+		m_state.file->read( m_state.cache.data(), sz );
 	}
 }
 
@@ -41,14 +44,28 @@ levitator::binfile::BinaryFile::~BinaryFile(){
 		flush();	
 }
 
+void BinaryFile::file( std::iostream &stream ){
+	m_state.file = &stream;
+}
+
+/*
+BinaryFile::State &BinaryFile::State::operator=( BinaryFile::State &&rhs ){
+	cache = std::move(rhs.cache);
+	file = rhs.file;
+	rhs.file = nullptr;
+}
+*/
+
 BinaryFile &BinaryFile::operator=(BinaryFile &&rhs){
 	m_state = std::move(rhs.m_state);
+	rhs.m_state.file = nullptr;		//important
 	return *this;
 }
 
 void levitator::binfile::BinaryFile::flush(){
 	auto lock = make_lock();
-	m_state.file->write( &m_state.cache.front(), m_state.cache.size() );
+	m_state.file->seekp(0);
+	m_state.file->write( m_state.cache.data(), m_state.cache.size() );
 	m_state.file->flush();	
 }
 

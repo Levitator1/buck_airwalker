@@ -38,66 +38,29 @@ public:
 template<typename, typename>
 class ThreadPool;
 
-template<class Pool, class MessageHandlerF>
-class PoolThreadBase;
+template<class Task>
+class PoolThread:public std::thread::thread{
 
-// Feel like std::thread probably should have a start() method or something, but instead it launches
-// immediately upon instantiation and that means that a derived thread class should not have
-// any state, unless it is rendered unmovable. Otherwise, you move "this" and the thread is
-// already executing and its "this" is now pointing at freed memory or at an invalid post-move object.
-// 
-template<class Task, class Thread, class MessageHandlerF>
-class PoolThreadBase< ThreadPool<Task, Thread>, MessageHandlerF >:public std::thread::thread{
 public:
 	using task_type = Task;
-	using thread_pool_type = ThreadPool<Task, Thread>;
-	using handler_type = MessageHandlerF;
+	using thread_pool_type = ThreadPool<task_type, PoolThread>;
 
-private:
-	//handler_type m_handler;
-
-	static void thread_proc(thread_pool_type &pool, handler_type handler){
+private:	
+	static int pool_thread_proc( thread_pool_type &pool){		
 		int result;
 		do{
 			auto task = pool.pop();
-			result = handler(task);
+			result = task();
 		}while( result  == 0 );
-	}
-
-protected:
-	/*
-	PoolThreadBase(thread_pool_type &pool, handler_type &&handler ):
-		thread( &PoolThreadBase::thread_proc, this, std::ref(pool) ),
-		m_handler(std::move(handler)){}
-	*/
-	
-	PoolThreadBase(thread_pool_type &pool, const handler_type &handler ):
-		thread( &PoolThreadBase::thread_proc, std::ref(pool), std::ref(handler) ){			
-	}
-};
-
-//namespace impl{
-//}
-
-template<class Task>
-class PoolThread:public PoolThreadBase<ThreadPool<Task, PoolThread<Task>>, int (*)(const Task &) >{
-public:
-	using base_type = PoolThreadBase<ThreadPool<Task, PoolThread<Task>>, int (*)(const Task &) >;
-	using task_type = typename base_type::task_type;
-
-private:	
-	
-	static int pool_thread_handler_proc( const Task &task){		
-		return task();
+		return result;
 	}
 
 public:
-	using thread_pool_type = typename base_type::thread_pool_type;
-
 	PoolThread(thread_pool_type &pool):
-		base_type(pool, &pool_thread_handler_proc ){}
+		std::thread::thread::thread(pool_thread_proc, std::ref(pool)){}
 };
 
+/*
 //A pool thread type that knows to dereference queue entries as pointers
 template<class TaskP>
 class PointerPoolThread:public PoolThreadBase<ThreadPool<TaskP, PointerPoolThread<TaskP>>, int (*)(const TaskP &task)>{
@@ -120,6 +83,7 @@ public:
 		base_type( pool, &handler_proc){}
 
 };
+*/
 
 //Task must be constructible from ThreadPool reference
 //Should launch a thread process on construction, as std::thread does

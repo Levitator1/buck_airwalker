@@ -49,7 +49,6 @@ std::ostream &jab::exception::operator<<( std::ostream &stream,  const std::exce
     return stream;
 }
 
-
 IOError::IOError( const std::string &msg ):
 	std::runtime_error(msg){
 

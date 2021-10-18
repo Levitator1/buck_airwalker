@@ -129,7 +129,9 @@ public:
 	StateFile() = default;
 	StateFile( const std::filesystem::path & );
 	~StateFile();
-	StateFile &operator=( StateFile && ) = default;	
+	StateFile &operator=( StateFile && );
+
+	std::size_t size() const;
 	const_iterator_type begin() const;
 	const_iterator_type end() const;
 	iterator_type begin();

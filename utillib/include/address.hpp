@@ -49,16 +49,16 @@ public:
 		return to_ptr();
 	}
 
-	//Calculate the positive offset needed to confrom this pointer to its referent's proper memory alignment
+	//Calculate the positive byte offset needed to confrom this pointer to its referent's proper memory alignment
 	int align_shift() const{
-		return alignof(T) - (m_int & align_mask);
+		auto mod = m_int & align_mask;
+		return (alignof(T) - mod) & align_mask;		
 	}
 
 	//Return a copy of this address having had align_shift() applied
 	address align() const{
 		return { m_int + align_shift() };
 	}
-
 };
 
 }

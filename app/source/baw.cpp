@@ -16,19 +16,41 @@ k3yab::bawns::baw::baw(const k3yab::bawns::Config &conf):
 	m_config(conf){		
 }
 
+//unique_ptr which forwards the call operator
+class callable_task_ptr : public std::unique_ptr<node_task>{
+	using base_type = std::unique_ptr<node_task>;
+
+public:
+	using base_type::base_type;
+
+	int operator()(){
+		return (*this->get())();
+	}
+};
+
+k3yab::bawns::node_task::node_task(baw &app, const std::string &callsign):
+	m_appp(&app),
+	m_callsign(callsign){}
+
+k3yab::bawns::node_task::node_task():
+	m_appp(nullptr){}
+
+int k3yab::bawns::node_task::operator()(){
+	if(!m_appp)
+		return -1;
+
+		
+	return 0;
+}
 
 void k3yab::bawns::baw::run(){
-	using thread_pool_type = ThreadPool< std::unique_ptr<node_task>, PointerPoolThread<std::unique_ptr<node_task>>  >;
+	using thread_pool_type = ThreadPool< node_task  >;
 
 	console.out() << "Starting..." << endl;
 	thread_pool_type workers(m_config.threads);
 
 	console.out() << "Using state file: " << m_config.state_path << endl;
 	m_state = { m_config.state_path };
+	console.out() << "Nodes found: " << m_state.size() << endl;
+
 }
-
-
-int k3yab::bawns::node_task::operator()(){
-	return 0;
-}
-

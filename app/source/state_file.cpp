@@ -63,7 +63,7 @@ void state_file_blocks::node::verify() const{
 void state_file_blocks::header::verify() const{
 	check_record_ends(*this);
 
-	if( std::string( identifier, sizeof(identifier) ) != std::string(identifier_string) )
+	if( std::string( identifier, sizeof(identifier)-1 ) != std::string(identifier_string) )
 		throw StateFileError("State file identifier does not match. Looks like the wrong format.");
 
 	if( endian_stamp != 1 )
@@ -85,13 +85,22 @@ std::fstream null_stream;
 //	m_stream(),
 //	m_bfile(m_stream, 0){}
 
+static std::fstream open_file( const std::filesystem::path &path ){
+	//Open momentarily for writing only to ensure that the file is created
+	//if it does not yet exist
+	{
+		std::fstream tmp = { path,  std::fstream::out | std::fstream::ate | std::fstream::app};
+	}
+	return {path, std::fstream::binary | std::fstream::in | std::fstream::out };
+} 
+
 state::StateFile::StateFile( const std::filesystem::path &path ):m_state{
-	{path, m_state.stream.binary | m_state.stream.in | m_state.stream.out },
+	open_file(path),
 	{m_state.stream, 4096},
 	{path}}{
 
 	//New/empty file case
-	if(m_state.bfile.size() == 0){
+	if(m_state.bfile.size_on_disk() == 0){
 		m_state.bfile.alloc( state_file_blocks::header{} );
 	}
 	else{
@@ -115,14 +124,29 @@ state::StateFile::StateFile( const std::filesystem::path &path ):m_state{
 
 state::StateFile::~StateFile(){
 
+	if(!m_state.bfile)
+		return;
+
 	m_state.bfile.flush();
-	m_state.stream.close();
+
+	const auto sz = m_state.bfile.size();
+	const auto dsz = m_state.bfile.size_on_disk();
+
+	//Probably a poor convention to close a file which was provided to us open
+	//But it has to be resized
+	//m_state.stream.close();
 
 	//Somewhat awkwardly reopen the file to truncate it if it shrank, which it usually won't
-	if( m_state.bfile.size() < m_state.bfile.size_on_disk() ){
+	if( sz < dsz ){
 		FSFile tmp(m_state.file_path, w);
-		tmp.truncate(m_state.bfile.size());
+		tmp.truncate(sz);
 	}
+}
+
+state::StateFile &state::StateFile::operator=( state::StateFile &&rhs ){
+	m_state = std::move(rhs.m_state);
+	m_state.bfile.file(m_state.stream);
+	return *this;
 }
 
 template<typename BF, class = jab::meta::permit_any_cv<BF, levitator::binfile::BinaryFile>>
@@ -134,6 +158,10 @@ static BinaryFile::locked_ref< typename jab::util::copy_cv<BF, header>::type> fe
 
 BinaryFile::locked_ref<header> state::StateFile::header(){
 	return fetch_header(m_state.bfile);
+}
+
+std::size_t state::StateFile::size() const{
+	return m_state.nodes.size();
 }
 
 BinaryFile::locked_ref<const header> state::StateFile::header() const{
