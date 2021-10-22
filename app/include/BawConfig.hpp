@@ -13,7 +13,7 @@ public:
 
 struct Config{
 	
-	constexpr static char application_name[] = {"Buck Airwalker"};
+	constexpr static char application_name[] = "Buck Airwalker";
 	constexpr static char default_state_path[] = "baw_state.bin";
 	int threads = 1;
 	std::filesystem::path state_path = default_state_path; 

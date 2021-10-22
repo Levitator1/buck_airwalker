@@ -14,6 +14,9 @@ class locked_ref_base:public std::reference_wrapper<T>{
     using base_type = std::reference_wrapper<T>;
     std::unique_lock<M> m_guard;    
 
+	//operator T &() = delete;
+	//operator const T &() const = delete;
+
 public:
     using value_type = T;
     using mutex_type = M;

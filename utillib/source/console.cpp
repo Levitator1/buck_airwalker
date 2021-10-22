@@ -8,36 +8,47 @@ using namespace levitator::concurrency;
 Console jab::util::console;
 
 void Console::init(){
-	m_inp = &std::cin;
-	m_outp = &std::cout;
-	m_errp = &std::cerr;
+	in_stream_pointer = &std::cin;
+	out_stream_pointer = &std::cout;
+	error_stream_pointer = &std::cerr;
 }
 
 Console::in_type Console::in(){
-	return { *m_inp, m_in_mutex };
+	return {  *this, lock_type(m_in_mutex) };
 }
 
 Console::out_type Console::out(){
-	return { *this };
+	return {  *this };
 }
 Console::err_type Console::err(){
 	return { *this };
 }
 
 ConsoleOutBuffer::~ConsoleOutBuffer(){
-	ref_type::get().queue_out( str() );
+	p_console->queue_out( p_sstream.str() );
 }
 
 ConsoleErrBuffer::~ConsoleErrBuffer(){
-	ref_type::get().queue_err( str() );
+	p_console->queue_err( p_sstream.str() );
 }
 
 void Console::queue_out( const std::string &msg ){
-	m_queue.push( jab::util::impl::make_console_output_task(m_outp, msg ) );
+	m_queue.push( jab::util::impl::make_console_output_task(out_stream_pointer, msg ) );
 }
 
 void Console::queue_err( const std::string &msg ){	
-	m_queue.push( jab::util::impl::make_console_output_task(m_errp, msg ) );
+	m_queue.push( jab::util::impl::make_console_output_task(error_stream_pointer, msg ) );
+}
+
+ConsoleStreamBase::ConsoleStreamBase(Console &cons):p_console(&cons){
+}
+
+ConsoleInput::ConsoleInput( Console &cons, lock_type &&lock ):
+	base_type(cons),
+	m_lock( std::move(lock)){}
+
+std::istream &ConsoleInput::get_istream() const{
+	return *p_console->in_stream_pointer;
 }
 
 EllipsisGuard::EllipsisGuard(const std::string &msg, const std::string &ok_string, const std::string &fail_string):

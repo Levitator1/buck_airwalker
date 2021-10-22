@@ -40,7 +40,7 @@
 		{
 			"label": "Clean",
 			"type": "shell",
-			"command": "cd build;make clean",
+			"command": "make -C ../build/app clean",
 			"problemMatcher": [
 				"$gcc"
 			],

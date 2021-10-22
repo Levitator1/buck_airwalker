@@ -35,10 +35,14 @@ k3yab::bawns::node_task::node_task(baw &app, const std::string &callsign):
 k3yab::bawns::node_task::node_task():
 	m_appp(nullptr){}
 
+Console::out_type k3yab::bawns::node_task::print() const{	
+	//return console.out() << m_callsign << ": ";
+	return console.out();
+}
+
 int k3yab::bawns::node_task::operator()(){
 	if(!m_appp)
-		return -1;
-
+		return -1;	
 		
 	return 0;
 }
@@ -55,4 +59,23 @@ void k3yab::bawns::baw::run(){
 	//console.out() << "Pending or incomplete nodes from a previous run: " << pending_count << endl;
 	console.out() << "Total nodes known: " << m_state.size() << endl;
 
+	//TODO: Previous state resumption goes here (incomplete nodes, etc.)
+
+	console.out() << "Reading stdin for root node callsigns, one per line..." << endl;
+
+	string call;
+	int ct = 0;
+	while(console.in()){
+		std::getline(console.in().get_istream(), call);
+
+		//eof will count as a blank line!
+		if(call.size() <= 0)
+			continue;
+
+		workers.push( { *this, call } );
+		++ct;
+	}
+
+	console.out() << ct << " callsigns read. Running query threads..." << endl;
+	workers.shutdown();
 }

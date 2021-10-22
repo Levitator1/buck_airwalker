@@ -6,7 +6,7 @@
 #include <mutex>
 #include <functional>
 #include "concurrency/thread_pool.hpp"
-#include "concurrency/locked_ostream_proxy.hpp"
+#include "concurrency/stream_forwarder.hpp"
 #include "compiler.hpp"
 
 /*
@@ -17,7 +17,6 @@
 namespace jab::util{
 
 class Console;
-
 
 namespace impl{
 inline static auto make_console_output_task(std::ostream *stream, const std::string &msg){
@@ -35,27 +34,67 @@ inline static auto make_console_output_task(std::ostream *stream, const std::str
 
 struct ConsoleTypes{
 	using mutex_type = std::recursive_mutex;
-	using ref_type = std::reference_wrapper<Console>;
+	using lock_type = std::unique_lock<mutex_type>;
+	//using ref_type = std::reference_wrapper<Console>;
 	using task_type = decltype( impl::make_console_output_task(nullptr, {}) );
 	using thread_pool_type = levitator::concurrency::ThreadPool<task_type>;
 };
 
+class ConsoleStreamBase : public ConsoleTypes{
 
-class ConsoleBufferBase : public ConsoleTypes, public std::stringstream, public ConsoleTypes::ref_type{
+protected:
+	Console *p_console;
+
 public:
-	using ref_type = ConsoleTypes::ref_type;
-	using ref_type::ref_type;
+	ConsoleStreamBase(Console &cons);
 };
 
-class ConsoleOutBuffer : public ConsoleBufferBase{
+
+template<class This>
+class ConsoleOutputBase : 
+	public ConsoleStreamBase, 
+	public levitator::concurrency::ostream_forwarder<This, std::ostream>{
+
+	using base_type = ConsoleStreamBase;
+
+protected:
+	std::stringstream p_sstream;
+
+public:	
+	using base_type::base_type;
+
+	std::stringstream &get_ostream(){
+		return p_sstream;
+	}
+};
+
+class ConsoleInput : 
+	public ConsoleStreamBase, 	
+	public levitator::concurrency::istream_forwarder<ConsoleInput, std::istream>{
+	using base_type = ConsoleStreamBase;
+	using lock_type = ConsoleTypes::lock_type;
+
+	lock_type m_lock;
+
+public:	
+	ConsoleInput( Console &cons,  lock_type &&lock);
+	std::istream &get_istream() const;
+};
+
+class ConsoleOutBuffer : public ConsoleOutputBase<ConsoleOutBuffer>{
+	using base_type = ConsoleOutputBase<ConsoleOutBuffer>;
+
 public:
-	using ConsoleBufferBase::ConsoleBufferBase;
+	using base_type::base_type;
+	ConsoleOutBuffer(ConsoleOutBuffer &&) = default;
 	~ConsoleOutBuffer();
 };
 
-class ConsoleErrBuffer : public ConsoleBufferBase{
+class ConsoleErrBuffer : public ConsoleOutputBase<ConsoleErrBuffer>{
+	using base_type = ConsoleOutputBase<ConsoleErrBuffer>;
+
 public:
-	using ConsoleBufferBase::ConsoleBufferBase;
+	using base_type::base_type;
 	~ConsoleErrBuffer();
 };
 
@@ -68,18 +107,19 @@ class Console : public ConsoleTypes{
 
 	using message_type = std::function< void () >;
 	using mutex_type = ConsoleTypes::mutex_type;
-	mutex_type m_in_mutex, m_out_mutex, m_err_mutex;
-	std::atomic<std::istream *> m_inp = nullptr;
-	std::atomic<std::ostream *> m_outp = nullptr, m_errp = nullptr;
-
+	mutex_type m_in_mutex;
+	
 	using task_type = ConsoleTypes::task_type;
 	using thread_pool_type = ConsoleTypes::thread_pool_type;
 	thread_pool_type m_queue = {1, impl::make_console_output_task(nullptr, {})};	
 
 public:
-	using in_type = levitator::concurrency::locked_istream_ref<std::istream, mutex_type>;
+	using in_type = ConsoleInput;
 	using out_type = ConsoleOutBuffer;
 	using err_type = ConsoleErrBuffer;
+
+	std::atomic<std::istream *> in_stream_pointer = nullptr;
+	std::atomic<std::ostream *> out_stream_pointer = nullptr, error_stream_pointer = nullptr;
 
 	//Requires an explicit call to init in order to avoid static fiasco in pre-main
 	void init();
@@ -92,6 +132,8 @@ public:
 	void queue_err(const std::string &msg);
 };
 POP_WARN
+
+extern Console console;
 
 //Says something...
 //and then commits to saying "FAILED" unless notified to say "OK".
@@ -106,7 +148,5 @@ public:
 	void outcome(const std::string &str);
     void ok();
 };
-
-extern Console console;
 
 }

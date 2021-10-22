@@ -31,8 +31,10 @@ class node_task{
 	std::string m_callsign;
 
 public:
-	node_task(); //terminate
+	node_task(); //terminate worker thread
 	node_task( baw &app, const std::string &call);
+
+	jab::util::Console::out_type print() const;
 	int operator()();
 };
 
