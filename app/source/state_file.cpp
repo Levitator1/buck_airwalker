@@ -52,7 +52,6 @@ void state_file_blocks::record_end::verify() const{
 
 state_file_blocks::node::node( const std::string &csign ):
 	callsign(csign){
-
 }
 
 void state_file_blocks::node::verify() const{
@@ -74,9 +73,14 @@ void state_file_blocks::header::verify() const{
 }
 
 void state::StateFile::insert_all_nodes_node( node_type &nd){
-	auto result = m_state.nodes.insert( { nd.callsign.c_str() , {&nd, m_state.bfile} } );
-	if(!result.second)
-		throw StateFileError("There's a duplicate entry in the state file, which means it's corrupt: " + nd.callsign.str());
+	auto call = std::string(nd.callsign.c_str());
+	auto ptr = offset_ptr<node>(&nd, &m_state.bfile );
+
+	//TODO
+	//auto value = typename node_map_type::value_type(call, ptr );
+	//auto result = m_state.nodes.insert( value );
+	//if(!result.second)
+	//	throw StateFileError("There's a duplicate entry in the state file, which means it's corrupt: " + nd.callsign.str());
 }
 
 std::fstream null_stream;
@@ -101,23 +105,23 @@ state::StateFile::StateFile( const std::filesystem::path &path ):m_state{
 
 	//New/empty file case
 	if(m_state.bfile.size_on_disk() == 0){
-		m_state.bfile.alloc( state_file_blocks::header{} );
+		m_state.bfile.construct<state_file_blocks::header>();
 	}
 	else{
 		header().get().verify();
 		//No nodes to process
-		if(!header().get().all_node_listp)
+		if(!header().get().all_nodes.next)
 			return;
 
 		//Post-process an existing file with possible nodes in it
 		//First, build a dictionary of all of the node callsigns so that duplicates can be caught
 		//and while we are at it, we will build a list of those which are incomplete and need visiting.
-		for(auto &node : *header().get().all_node_listp ){
+		for(auto &node : m_state.file_nodes){
 			node.verify();
 			insert_all_nodes_node(node);
 
 			if(node.query_count < header().get().visit_serial)
-				m_state.pending.push_back( {&node, m_state.bfile });
+				m_state.pending.push_back( {&node, &m_state.bfile });
 		}
 	}
 }
@@ -169,20 +173,28 @@ BinaryFile::locked_ref<const header> state::StateFile::header() const{
 }
 
 state::StateFile::const_iterator_type state::StateFile::begin() const{
-	return header::node_list_type::cbegin( &*header().get().all_node_listp ).lock( m_state.bfile.make_lock() );
+	auto guard = m_state.bfile.make_lock();
+	//return header::node_list_type::cbegin( &*header().get().all_node_listp ).lock_rebound( std::move(guard) );
+	auto it =  this->m_state.file_nodes.cbegin();
+	return it.lock( std::move(guard) );
 }
 
+/*
 state::StateFile::const_iterator_type state::StateFile::end() const{
-	return header::node_list_type::cend( &*header().get().all_node_listp ).lock( m_state.bfile.make_lock() );
+	auto guard = m_state.bfile.make_lock();
+	return header::node_list_type::cend( &*header().get().all_node_listp ).lock_rebound( std::move(guard) );
 }
 
 state::StateFile::iterator_type state::StateFile::begin(){
-	return header::node_list_type::begin( &*header().get().all_node_listp ).lock( m_state.bfile.make_lock() );
+	auto guard = m_state.bfile.make_lock();
+	return header::node_list_type::begin( &*header().get().all_node_listp ).lock_rebound( std::move(guard) );
 }
 
 state::StateFile::iterator_type state::StateFile::end(){
-	return header::node_list_type::end( &*header().get().all_node_listp ).lock( m_state.bfile.make_lock() );
+	auto guard = m_state.bfile.make_lock();
+	return header::node_list_type::end( &*header().get().all_node_listp ).lock_rebound( std::move(guard) );
 }
+*/
 
 state::StateFile::node_pointer_type state::StateFile::append_node(const std::string &callsign){
 
@@ -192,14 +204,15 @@ state::StateFile::node_pointer_type state::StateFile::append_node(const std::str
 	//auto nodep = m_bfile.alloc<state_file_blocks::node>(callsign);
 	//auto linkp = m_bfile.alloc<header::node_list_type>( nodep, header().all_node_listp);
 	//header().all_node_listp = linkp;
-	auto nodep = m_state.bfile.list_insert<state_file_blocks::node>( header().get().all_node_listp, callsign );
+	//auto nodep = m_state.bfile.list_insert<state_file_blocks::node>( header().get().all_node_listp, callsign );
+	auto &node = m_state.file_nodes.push_front(  {callsign} );
 
 	//Update table of all nodes
-	insert_all_nodes_node(*nodep);
+	insert_all_nodes_node(node);
 
 	//Remember that this node has not been visited
-	m_state.pending.push_back( {nodep, m_state.bfile} );
-	return nodep;
+	m_state.pending.push_back( {&node, &m_state.bfile} );
+	return {&node};
 }
 
 /*

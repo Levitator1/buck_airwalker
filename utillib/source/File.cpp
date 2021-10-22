@@ -215,8 +215,7 @@ FDSet::FDSet(){
 }
 
 void FDSet::set_impl(File::fd_t fd){
-    
-    
+     
     //Null fd is NOP
     if(fd == File::null_fd)
         return;

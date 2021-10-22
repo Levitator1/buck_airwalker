@@ -22,7 +22,6 @@ struct move_or_copy_impl{
 	static result_ref_type pass(input_ref_type v){
 		return v;
 	}
-
 };
 
 template<typename T>
@@ -457,6 +456,30 @@ public:
 		return { value() << rhs };
 	}
 
+};
+
+namespace impl{
+
+	//duplicated from util.hpp
+	template<typename... Args>
+	void null_func(Args... args){		
+	}
+
+}
+
+//Same as align-of, but will return 1 for the alignment of void without producing a warning
+template<typename T>
+class alignof_any:public std::integral_constant<int, alignof(T)>{	
+};
+
+template<>
+class alignof_any<void>:public std::integral_constant<int, 1>{
+};
+
+template<typename T>
+concept is_dereferenceable = requires(T p) {
+    impl::null_func(p.operator->());
+	impl::null_func(p.operator*());
 };
 
 

@@ -69,6 +69,20 @@ void levitator::binfile::BinaryFile::flush(){
 	m_state.file->flush();	
 }
 
+void *BinaryFile::allocate(std::size_t sz, int align){	
+	auto lock = make_lock();
+	auto sz2 = sz;
+
+	//pad size for alignment if necessary
+	auto addr = jab::util::address<void>( m_state.cache.data() );
+	if(addr){			
+		sz2 += addr.align_shift();
+	}				
+	
+	m_state.cache.resize( m_state.cache.size() + sz2);
+	return (&*m_state.cache.end()) - sz;
+}
+
 BinaryFile::size_type BinaryFile::size() const{
 	auto lock = make_lock();
 	return m_state.cache.size();

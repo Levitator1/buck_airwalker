@@ -51,6 +51,8 @@ void k3yab::bawns::baw::run(){
 
 	console.out() << "Using state file: " << m_config.state_path << endl;
 	m_state = { m_config.state_path };
-	console.out() << "Nodes found: " << m_state.size() << endl;
+	//auto pending_count = m_state.pending.size();	
+	//console.out() << "Pending or incomplete nodes from a previous run: " << pending_count << endl;
+	console.out() << "Total nodes known: " << m_state.size() << endl;
 
 }

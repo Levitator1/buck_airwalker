@@ -1,5 +1,6 @@
 #pragma once
 #include <cstddef>
+#include <memory>
 #include <type_traits>
 #include <mutex>
 #include <iostream>
@@ -12,6 +13,9 @@
 #include "File.hpp"
 
 namespace levitator::binfile{
+
+template<typename T>
+class BinaryFile_allocator;
 
 namespace blocks{
 	template<typename T>
@@ -37,6 +41,9 @@ public:
 
 	template<typename T = BinaryFile>
 	using const_locked_ref = concurrency::locked_ref<const T, mutex_type>;
+
+	template<typename T>
+	using allocator = BinaryFile_allocator<T>;
 
 private:	
 	using file_ref_type = locked_ref<std::iostream>;	
@@ -112,25 +119,19 @@ public:
 	std::streamsize size_on_disk() const;
 	size_type size() const;
 
-	//Not implementing any concept of a free/reuse store, so there is no free, only allocation/append
+	//allocate a specific size with alignment
+	void *allocate(std::size_t sz, int align);
+
 	template<typename T>
-	auto alloc(T &&obj){
+	T *allocate(std::size_t n){
 		using result_type = typename std::remove_reference<T>::type;
-		auto lock = make_lock();
+		return reinterpret_cast<result_type *>( allocate(sizeof(result_type) * n, alignof(result_type)) );
+	}
 
-		//pad size for alignment if necessary
-		auto addr = jab::util::address( reinterpret_cast<T *>(m_state.cache.data()) );
-		std::size_t sz;
-
-		sz = sizeof(result_type);
-		if(addr){			
-			sz += addr.align_shift();
-		}				
-		
-		m_state.cache.resize( m_state.cache.size() + sz);
-		auto ptr = (&*m_state.cache.end()) - sizeof(result_type);
-		auto ptr2 = jab::util::reinterpret_const_cast<result_type *>( ptr );
-		return new(ptr2) result_type(obj);
+	//Not implementing any concept of a free/reuse store, so there is no free, only allocation/append
+	template<typename T, typename... Args>
+	auto construct( Args... args ){						
+		return new( allocate<T>(1) ) T( std::forward<Args>(args)... );
 	}
 
 	//resize the file to a length of n bytes
@@ -159,6 +160,7 @@ public:
 		return do_fetch<T>(this, pos);
 	}
 
+	/*
 	template<typename T, typename Ptr>
 	T *list_insert( Ptr &ptr, T &&obj){
 		AppendGuard guard(*this);
@@ -174,43 +176,87 @@ public:
 		ptr = linkp;
 		return objp;
 	}
+	*/
 };
 
-//T is the type the list is declared with
-//U is T with optional CV qualifiers
+template<typename T>
+class BinaryFile_allocator{
+	BinaryFile *m_file;
+
+public:
+	using value_type = T;
+	using pointer = value_type *;
+
+	template<typename U>
+	using rebind = BinaryFile_allocator<U>;
+
+	//It's a standard convention to be able to rebind an allocator, so they need
+	//to be constructible from each other for this to be fully useful
+	template<typename U>
+	BinaryFile_allocator(const BinaryFile_allocator<U> &other):
+		m_file(other.m_file){}
+
+	//Default-constructed invalid allocator
+	BinaryFile_allocator():
+		m_file(nullptr){}
+
+	BinaryFile_allocator(BinaryFile &file):
+		m_file(&file){}
+
+	pointer allocate(std::size_t n){
+		return m_file->allocate<T>(n);
+	}
+};
+
+//T is link_type::value_type possibly with additional CV qualifiers
 //Can maintain an optional scoped lock associated with the scope of the iterator
 //to prevent the iterated list from updating.
-template<typename T, typename U, class LockType = jab::util::null_type>
+template<typename T, typename LinkP, class LockType = jab::util::null_type>
+requires jab::util::is_dereferenceable<LinkP>
 class linked_list_iterator{
 public:
-using value_type = U;
-	using list_type = blocks::linked_list<T>;
+	using link_pointer = LinkP;
+	using link_type = typename std::pointer_traits<link_pointer>::element_type;
+	using value_type = T;
+	//using list_type = blocks::linked_list<T>;
 	using lock_type = LockType;
-	lock_type m_lock;
-	const list_type *m_linkp;
-
-public:
 
 	//Seems to be called "rebinding" to reparameterize an existing template instance
-	template<typename LT>
-	using rebind_for_lock = linked_list_iterator<T, U, LT>;
+	template<typename U, typename LinkP2 = LinkP, class LockType2 = LockType>
+	using rebind = linked_list_iterator<U, LinkP2, LockType2>;
 
-	linked_list_iterator(const list_type *linkp = nullptr, lock_type &&lock = {}):
+	lock_type m_lock;
+	link_pointer m_linkp;
+
+/*
+protected:
+	template<typename U, typename LinkP2, class LockType2 >
+	auto lock_rebound_impl( LockType2 &&lk ){
+		using LockType3 = std::remove_reference_t<LockType2>;
+		using new_lock_type = std::remove_reference_t<L>;
+		return This<LinkP, new_lock_type>{m_linkp, std::move(lk)};
+	}
+*/
+
+public:
+	linked_list_iterator(const link_pointer &linkp = {nullptr}, lock_type &&lock = {}):
 		m_lock( std::move(lock)),
 		m_linkp(linkp){}
 
 	
+	/*
 	linked_list_iterator &lock( lock_type &&lk ){
 		m_lock = std::move(lk);
 		return *this;
 	}
+	*/
 
 	//Let's get weird.  Returns a copy of the same iterator, as a slightly different type, now with the
 	//provided scoped lock embedded.
 	template<typename L>
-	auto lock( L &&lk ){
-		using new_lock_type = std::remove_reference_t<L>;
-		return linked_list_iterator<T, U, new_lock_type>{m_linkp, std::move(lk)};
+	rebind<T, LinkP, std::remove_reference_t<L>> lock( L &&lk ) const{
+		return {m_linkp, std::move(lk)};
+		//return lock_rebound_impl<std::remove_reference_t<L>, linked_list_iterator>(std::move(lk));
 	}
 
 	value_type &operator*() const{
@@ -226,10 +272,9 @@ public:
 		return *this;
 	}
 
-	bool operator==(const linked_list_iterator &rhs){
+	bool operator==(const linked_list_iterator &rhs) const{
 		return m_linkp == rhs.m_linkp;
 	}
-
 };
 
 //A traits type which defines overloads of base_ptr(), which take some variety of RelPtr
@@ -289,9 +334,12 @@ private:
 	template<typename U, typename This, typename = jab::meta::permit_any_cv<This, RelPtr> >
 	inline static ::ssize_t make_offset( U *obj, This *thisp){
 		using this_type = typename jab::util::copy_cv<This, typename traits_type::RelPtr_type>::type;
-
-		auto thisp2 = static_cast<this_type *>(thisp);
-		return to_byte_ptr(obj) - to_byte_ptr( traits_type::base_ptr( *thisp2 ) );
+		if(obj){
+			auto thisp2 = static_cast<this_type *>(thisp);
+			return to_byte_ptr(obj) - to_byte_ptr( traits_type::base_ptr( *thisp2 ) );
+		}
+		else
+			return 0;
 	}
 
 	//template<typename This, typename = jab::meta::permit_any_cv<This, RelPtr<T>> >
@@ -328,7 +376,7 @@ private:
 public:
 	//inline RelPtr(T *ptr = this):	//This doesn't work, unsurprisingly
 	inline RelPtr(T *ptr = nullptr):
-		m_offset( ptr ? make_offset(ptr, this) : 0 ){}
+		m_offset( make_offset(ptr, this) ){}
 
 	inline RelPtr(T &obj):
 		RelPtr(&obj){
@@ -361,10 +409,16 @@ public:
 		return *this;
 	}
 
+	//Same as copying
 	inline RelPtr &operator=( RelPtr &&rhs){
 		return operator=(rhs);
 	}
 
+	inline RelPtr &operator=( pointer_type ptr ){
+		m_offset = make_offset(ptr, this);
+		return *this;
+	}
+	
 	inline pointer_type operator->(){
 		return make_pointer();
 	}
@@ -394,6 +448,9 @@ struct OffsetPtr_traits{
 //An elaboration on RelPtr which calls a function to retrieve its base address.
 //This is so that you can retrieve the base address from the contents of a vector
 //which may reallocate its buffer, for example.
+//This assumes that it's not self-relative like the basic RelPtr<> is, so
+//it just copies itself without any relocation or pointer math
+//
 template<typename T, class BaseF, class Traits = OffsetPtr_traits<T, BaseF>>
 class OffsetPtr:public RelPtr<T, Traits>{
 public:
@@ -406,82 +463,193 @@ private:
 	base_ptr_function m_base_f;
 
 public:
+	/*
 	OffsetPtr(pointer_type pobj, base_ptr_function func):
-		base_type(pobj),		
+	base_type(pobj),		
 		m_base_f(func){}	
+	*/
+	OffsetPtr(pointer_type pobj, base_ptr_function func):
+		base_type(),
+		m_base_f(func){
+
+		//Has to be done here otherwise the base will initialize before the functor is set
+		this->base_type::operator=(pobj);
+	}
+
+	OffsetPtr(const OffsetPtr &rhs):
+		base_type(rhs),
+		m_base_f(rhs.m_base_f){			
+	}		
+
 
 	auto base_ptr() const{
 		return m_base_f();
 	}
+
+	OffsetPtr &operator=(const OffsetPtr &rhs){
+		m_base_f = rhs.m_base_f;
+		this->base_type::operator=( rhs );
+		return *this;
+	}
+
+	//Same as copying
+	OffsetPtr &operator=(OffsetPtr &&rhs){
+		return operator=(rhs);
+	}
+
+	OffsetPtr &operator=(pointer_type ptr){
+		base_type::operator=(ptr);
+		return *this;
+	}
+	
+	/*
+	OffsetPtr &operator=(OffsetPtr &&rhs){
+		this->base_type::operator=( std::move(rhs) );
+		m_base_f = std::move( rhs.m_base_f );
+	}
+	*/
 };
 
 template<typename T>
-struct linked_list{
+struct linked_list_link{
 	using value_type = T;
-	using iterator_type = linked_list_iterator<T, T>;
-	using const_iterator_type = linked_list_iterator<T, const T>;
+	using link_type = linked_list_link<T>;
 	RelPtr<value_type> value_ptr;
-	RelPtr<linked_list> next;
+	RelPtr<linked_list_link> next;
+};
+
+//It's just a linked_list_link, but the type formalizes that it's the head of the list
+template<typename T>
+struct linked_list:public linked_list_link<T>{};
+
+template<typename T>
+struct doubly_linked_list_link{
+	using value_type = T;
+	RelPtr<value_type> value_ptr;
+	RelPtr<doubly_linked_list_link> next, prev;
+};
+
+template<typename T>
+struct doubly_linked_list:public doubly_linked_list_link<T>{};
+
+/*
+template<typename T>
+struct doubly_linked_list:public linked_list<T>{
+private:
+	using base_type = linked_list<T>;
 
 public:
-	linked_list( const RelPtr<value_type> &val, const RelPtr<linked_list> &nx ):
-		value_ptr(val),
-		next(nx){}
+	RelPtr<linked_list<T>> next;
 
-	template<typename P>
-	static void push_front(P &ptr, linked_list &link){		
-		link.next = ptr;
-		ptr = &link;
+	template<typename LockType>
+	auto lock_rebound(LockType &&lock){
+		//eturn base_type::lock_rebound_impl<>
 	}
 
-	static const_iterator_type begin( const linked_list *ptr ){
-		return {ptr};
+};
+*/
+}
+
+//Provided a pointer to the head node of a linked list,
+//provide a view on it that resembles an ordinary container
+template<typename LinkP, typename Alloc>
+requires jab::util::is_dereferenceable<LinkP>
+struct linked_list_view{
+
+public:
+	using link_pointer = LinkP;	
+	using link_type = typename std::pointer_traits<link_pointer>::element_type;
+	using value_type = typename std::pointer_traits<decltype(link_type::value_ptr)>::element_type;
+	using value_pointer = typename std::pointer_traits<link_pointer>::template rebind<value_type>;
+	using allocator_type = typename std::allocator_traits<Alloc>::template rebind_alloc<value_type>;
+	using link_allocator_type = typename std::allocator_traits<allocator_type>::template rebind_alloc<link_type>;	
+
+protected:
+	using allocator_traits = std::allocator_traits<allocator_type>;
+	using link_allocator_traits = std::allocator_traits<link_allocator_type>;
+
+	allocator_type m_alloc;
+	link_allocator_type m_link_alloc;
+	link_pointer m_head;
+
+public:
+	using iterator_type = linked_list_iterator<value_type, link_pointer>;
+	using const_iterator_type = linked_list_iterator<const value_type, link_pointer>;
+
+private:
+	static const_iterator_type discern_iterator_f( const linked_list_view * );
+	static iterator_type discern_iterator_f( linked_list_view * );
+	
+	template<typename U>
+	using discern_iterator_t = decltype( discern_iterator_f( std::declval<U>() ) );
+
+	template<class This>
+	static discern_iterator_t<This *> begin_impl( This *thisp ){
+		auto tmp = thisp->m_head;
+		tmp = &*thisp->m_head->next;
+		return { tmp };
 	}
 
-	static iterator_type begin( linked_list *ptr ){
-		return {ptr};
+	template<class This>
+	static discern_iterator_t<This *> end_impl( This *thisp ){
+		return { nullptr };
 	}
 
-	static const_iterator_type end( const linked_list *ptr ){
-		return {nullptr};
+	void link_front( value_type *vp ){
+		auto lp = new( link_allocator_traits::allocate(m_link_alloc, 1) ) link_type();
+		lp->value_ptr = vp;
+		lp->next = m_head->next;
+		m_head->next = lp;
 	}
 
-	static iterator_type end( linked_list *ptr ){
-		return {nullptr};
-	}
+public:
+	linked_list_view():
+		m_alloc(),
+		m_link_alloc(),
+		m_head(nullptr){}
 
-	static const_iterator_type cbegin( const linked_list *ptr ){
-		return {ptr};
-	}
+	linked_list_view( link_pointer link, const allocator_type &alloc ):
+		m_alloc(alloc),
+		m_link_alloc(m_alloc),
+		m_head(link){}
 
-	static const_iterator_type cend( const linked_list *ptr ){
-		return {nullptr};
+	//This is kind of dangerous because you could accidentally link an object outside the
+	//file address space
+	/*
+	void push_front(value_type &v){		
+		link_front(v);
+	}
+	*/
+
+	value_type &push_front(value_type &&v){
+		auto objp = new( allocator_traits::allocate(m_alloc, 1) ) value_type( std::move(v) );
+		link_front(objp);
+		return *objp;
 	}
 	
 	auto begin() const{
-		return begin(this);
+		return begin_impl(this);
 	}
 
 	auto begin(){
-		return begin(this);
+		return begin_impl(this);
 	}
 	
 	auto end() const{
-		return end(this);
+		return end_impl(this);
 	}
 
 	auto end(){
-		return end(this);
+		return end_impl(this);
 	}
 
 	auto cbegin() const{
-		return begin(this);
+		return begin_impl(this);
 	}
 
 	auto cend() const{
-		return end(this);
+		return end_impl(this);
 	}
 };
 
-}
 }

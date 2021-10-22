@@ -16,10 +16,11 @@ class address:public jab::util::delegate_arithmetic<int_address_type, address<T>
 	int_type m_int;
 
 public:
+	static constexpr int alignval = jab::util::alignof_any<value_type>::value;
 
 	//All the bits which represent misalignment. We assume 
 	//alignments are always represented as a power of 2, with a single 1-bit
-	static constexpr int_type align_mask = alignof(T) - 1;	
+	static constexpr int_type align_mask = alignval - 1;	
 
 	static int_type to_int(pointer_type p){
 		return reinterpret_cast<int_type>(p);
@@ -52,7 +53,7 @@ public:
 	//Calculate the positive byte offset needed to confrom this pointer to its referent's proper memory alignment
 	int align_shift() const{
 		auto mod = m_int & align_mask;
-		return (alignof(T) - mod) & align_mask;		
+		return (alignval - mod) & align_mask;		
 	}
 
 	//Return a copy of this address having had align_shift() applied
