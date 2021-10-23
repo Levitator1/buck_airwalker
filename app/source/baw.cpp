@@ -36,8 +36,8 @@ k3yab::bawns::node_task::node_task():
 	m_appp(nullptr){}
 
 Console::out_type k3yab::bawns::node_task::print() const{	
-	//return console.out() << m_callsign << ": ";
-	return console.out();
+	return console.out() << m_callsign << ": ";
+	//return console.out();
 }
 
 int k3yab::bawns::node_task::operator()(){

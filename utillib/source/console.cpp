@@ -24,8 +24,32 @@ Console::err_type Console::err(){
 	return { *this };
 }
 
+ConsoleOutBuffer::ConsoleOutBuffer( Console &cons ):
+	base_type(cons){}
+
+ConsoleOutBuffer::ConsoleOutBuffer( const ConsoleOutBuffer &rhs ):
+	base_type(*rhs.p_console){
+
+}
+
+ConsoleOutBuffer::ConsoleOutBuffer( ConsoleOutBuffer &&rhs ):
+	ConsoleOutBuffer(rhs){
+}
+
+
 ConsoleOutBuffer::~ConsoleOutBuffer(){
 	p_console->queue_out( p_sstream.str() );
+}
+
+ConsoleErrBuffer::ConsoleErrBuffer( Console &cons ):
+	base_type(cons){}
+
+ConsoleErrBuffer::ConsoleErrBuffer( const ConsoleErrBuffer &rhs ):
+	base_type(*rhs.p_console){
+}
+
+ConsoleErrBuffer::ConsoleErrBuffer( ConsoleErrBuffer &&rhs ):
+	ConsoleErrBuffer(rhs){
 }
 
 ConsoleErrBuffer::~ConsoleErrBuffer(){
@@ -69,3 +93,4 @@ void EllipsisGuard::outcome( const std::string &msg ){
 void EllipsisGuard::ok(){
 	outcome( m_success_string );
 }
+

@@ -13,7 +13,6 @@
 * Just a central place to put console messaging in, mainly for the purposes of exclusive locking,
 * so that threads don't talk over each other.
 */
-
 namespace jab::util{
 
 class Console;
@@ -49,7 +48,6 @@ public:
 	ConsoleStreamBase(Console &cons);
 };
 
-
 template<class This>
 class ConsoleOutputBase : 
 	public ConsoleStreamBase, 
@@ -81,12 +79,17 @@ public:
 	std::istream &get_istream() const;
 };
 
+//TODO:
+//Oddly, when you chain more than one operation on a line with the stream, the compiler
+//wants to perform an object copy. This is kind of inefficient, but not enough
+//to matter for the current project.
 class ConsoleOutBuffer : public ConsoleOutputBase<ConsoleOutBuffer>{
 	using base_type = ConsoleOutputBase<ConsoleOutBuffer>;
 
-public:
-	using base_type::base_type;
-	ConsoleOutBuffer(ConsoleOutBuffer &&) = default;
+public:	
+	ConsoleOutBuffer( Console & );
+	ConsoleOutBuffer(ConsoleOutBuffer &&);
+	ConsoleOutBuffer(const ConsoleOutBuffer &);
 	~ConsoleOutBuffer();
 };
 
@@ -94,7 +97,9 @@ class ConsoleErrBuffer : public ConsoleOutputBase<ConsoleErrBuffer>{
 	using base_type = ConsoleOutputBase<ConsoleErrBuffer>;
 
 public:
-	using base_type::base_type;
+	ConsoleErrBuffer( Console & );
+	ConsoleErrBuffer(ConsoleErrBuffer &&);
+	ConsoleErrBuffer(const ConsoleErrBuffer &);
 	~ConsoleErrBuffer();
 };
 
@@ -102,7 +107,6 @@ public:
 //I guess is in the anonymous namespace, and that results in a warning
 PUSH_WARN
 WARN_DISABLE_SUBOBJECT_LINKAGE
-
 class Console : public ConsoleTypes{
 
 	using message_type = std::function< void () >;
