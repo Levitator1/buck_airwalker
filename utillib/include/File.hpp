@@ -1,5 +1,6 @@
 #pragma once
 #include <sys/ioctl.h>
+#include <utility>
 #include <type_traits>
 #include <memory>
 #include <string>
@@ -70,6 +71,7 @@ public:
     File(File &&);
     
     //Could be implemented with dup(), but I don't feel like it yet
+	File( const File & );
     File &operator=(const File &) = delete;
     
     //Fundamental I/O operations
@@ -258,7 +260,9 @@ class Filestreambuf : public std::basic_streambuf<Char, Traits> {
 
     //Synchronize the streambuf get-pointers with the get-ringbuffer
     void update_gptrs(){
-        this->setg(m_state.rbuf.get_begin(), m_state.rbuf.get_begin(), m_state.rbuf.get_end());
+		//If the buffer is more than 1-sized, then reserve a character as a reliable put-back space
+		auto end = m_state.rbuf.size() > 1 ? m_state.rbuf.get_end() - 1 : m_state.rbuf.get_end();
+        this->setg(m_state.rbuf.get_begin(), m_state.rbuf.get_begin(), end);
     }
 
     //Synchronize the streambuf put-pointers with the put-ringbuffer
@@ -565,9 +569,9 @@ private:
 		file_type file;
 		Filestreambuf<char_type, traits_type> m_sb;
 		
-		State( char_type *buf = nullptr, file_type &&file = file_type()):
+		State( char_type *buf = nullptr, file_type &&file_arg = file_type()):
 			m_bufspace(buf),
-			file(std::move(file)),
+			file(std::move(file_arg)),
 			m_sb(file){}
 
 	} m_state;
@@ -590,6 +594,14 @@ public:
 		m_state.m_sb.file(m_state.file);
 		this->rdbuf(&m_state.m_sb);
 		return *this;
+	}
+
+	const file_type &file() const{
+		return m_state.file;
+	}
+
+	file_type &file(){
+		return m_state.file;
 	}
 };
 

@@ -31,16 +31,19 @@ inline static auto make_console_output_task(std::ostream *stream, const std::str
 }
 }
 
+struct ConsoleErrorHandler{
+	void operator()( const std::exception_ptr &ptr) const;
+};
+
 struct ConsoleTypes{
 	using mutex_type = std::recursive_mutex;
 	using lock_type = std::unique_lock<mutex_type>;
 	//using ref_type = std::reference_wrapper<Console>;
 	using task_type = decltype( impl::make_console_output_task(nullptr, {}) );
-	using thread_pool_type = levitator::concurrency::ThreadPool<task_type>;
+	using thread_pool_type = levitator::concurrency::ThreadPool<task_type, ConsoleErrorHandler>;	
 };
 
 class ConsoleStreamBase : public ConsoleTypes{
-
 protected:
 	Console *p_console;
 
@@ -115,7 +118,7 @@ class Console : public ConsoleTypes{
 	
 	using task_type = ConsoleTypes::task_type;
 	using thread_pool_type = ConsoleTypes::thread_pool_type;
-	thread_pool_type m_queue = {1, impl::make_console_output_task(nullptr, {})};	
+	thread_pool_type m_queue = { 1, ConsoleErrorHandler(), impl::make_console_output_task(nullptr, {}) };	
 
 public:
 	using in_type = ConsoleInput;

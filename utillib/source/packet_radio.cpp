@@ -21,7 +21,7 @@ AX25Address::AX25Address(const std::string &call_sign){
 }
 
 RadioSockAddr::RadioSockAddr( const std::string &dest, const std::vector<std::string> &route){
-    auto routen = route.size(), routemax = sizeof(this->fsa_digipeater);
+    const auto routen = route.size(), routemax = sizeof(this->fsa_digipeater);
     if(routen > routemax)
         throw AddressRouteTooLong("Route length of "s + to_string(routen) + 
             " nodes is more than hard system limit: " + to_string(routemax) );

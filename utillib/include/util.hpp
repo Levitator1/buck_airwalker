@@ -482,6 +482,23 @@ concept is_dereferenceable = requires(T p) {
 	impl::null_func(p.operator*());
 };
 
+//General case of a scoped guard object that does a thing when it goes away
+template<typename F>
+class Guard{
+public:
+	using function_type = F;
+
+private:
+	function_type m_func;
+
+public:
+	Guard( const F &f = {} ):m_func(f){}
+	Guard( F &&f ):m_func(std::move(f)){}
+	~Guard(){ m_func(); }
+};
+
+template<typename F>
+Guard( F &&f ) -> Guard<F>;
 
 }
 }

@@ -6,6 +6,18 @@
 namespace jab{
 namespace exception{
 
+//A common means of responding to an error in a background thread,
+//which is to print the error trace to stderr via the concurrent global console object
+class DefaultBackgroundExceptionHandler{
+
+	static constexpr char default_message[] = "Error in background thread...";
+	std::string m_msg;
+
+public:
+	DefaultBackgroundExceptionHandler( const std::string &msg = default_message );
+	void operator()( const std::exception_ptr &) const;
+};
+
 class InvalidAddress : public std::invalid_argument{
 public:
     using std::invalid_argument::invalid_argument;

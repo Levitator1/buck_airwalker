@@ -9,7 +9,7 @@
 			"type": "cppdbg",
 			"request": "launch",
 			"program": "${workspaceFolder}/../build/app/source/baw",
-			"args": [],
+			"args": [ "K3YAB-3" ],
 			"stopAtEntry": false,
 			"cwd": "${workspaceFolder}/../build",
 			"environment": [],

@@ -6,7 +6,7 @@ regression_SOURCES = main.cpp io.cpp test.cpp
 regression_DEPENDENCIES = $(LIBUTIL_PATH)
 AM_CPPFLAGS = -std=c++2a -I$(srcdir)/../utillib/include/
 
-LDADD = $(LIBUTIL_PATH)
+LDADD = $(LIBUTIL_PATH) -lpthread
 
 .PHONY: $(LIBUTIL_PATH)
 $(LIBUTIL_PATH):

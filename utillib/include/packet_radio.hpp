@@ -1,7 +1,9 @@
 #pragma once
+#include <sys/socket.h>
 #include <netax25/ax25.h>
 #include <string>
 #include <vector>
+#include <Socket.hpp>
 
 namespace jab::file{
 
@@ -14,8 +16,8 @@ namespace jab::file{
 //the protocol is not limited to text-only, AFAIK, but whatever.
 class AX25Address : public ::ax25_address{
 public:
-    AX25Address() = default;    //uninitialized, equivalent to the bare struct
-    AX25Address(const std::string &call_sign); //Initialized to the encoded call_sign with SSID
+    AX25Address() = default;    				//uninitialized, equivalent to the bare struct
+    AX25Address(const std::string &call_sign); 	//Initialized to the encoded call_sign with SSID
 
     //factory method
     static inline AX25Address addr( const std::string &host ){
@@ -26,8 +28,8 @@ public:
 //AX.25 and Netrom sockaddrs seem to be implemented identically except that the
 //address family is different. I guess they do about the same thing, but 
 //Netrom has more routing logic.
-class RadioSockAddr : public ::full_sockaddr_ax25{
-public:        
+class RadioSockAddr : public ::full_sockaddr_ax25, public jab::file::sockaddr_interface<RadioSockAddr>{
+public:
     RadioSockAddr( const std::string &dest, const std::vector<std::string> &route = std::vector<std::string>());
 };
 

@@ -3,6 +3,7 @@
 #include <mutex>
 #include <memory>
 #include <functional>
+#include <string>
 
 namespace levitator{
 namespace concurrency{

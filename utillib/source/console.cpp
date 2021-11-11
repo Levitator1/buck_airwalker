@@ -1,6 +1,8 @@
+#include "exception.hpp"
 #include "concurrency/concurrency.hpp"
 #include "console.hpp"
 
+using namespace jab::exception;
 using namespace jab::util;
 using namespace levitator::concurrency;
 
@@ -35,7 +37,6 @@ ConsoleOutBuffer::ConsoleOutBuffer( const ConsoleOutBuffer &rhs ):
 ConsoleOutBuffer::ConsoleOutBuffer( ConsoleOutBuffer &&rhs ):
 	ConsoleOutBuffer(rhs){
 }
-
 
 ConsoleOutBuffer::~ConsoleOutBuffer(){
 	p_console->queue_out( p_sstream.str() );
@@ -94,3 +95,26 @@ void EllipsisGuard::ok(){
 	outcome( m_success_string );
 }
 
+void ConsoleErrorHandler::operator()( const std::exception_ptr &ptr ) const{
+	try{
+		std::rethrow_exception(ptr);
+	}
+	catch(const std::exception &ex){
+		std::cerr << "Unexpected exception in Console I/O thread. That should never happen..." << std::endl;
+		std::cerr << ex << std::endl;
+	}
+}
+
+//Doesn't really make sense here, but it also doesn't make sense to create an object module for two functions
+DefaultBackgroundExceptionHandler::DefaultBackgroundExceptionHandler( const std::string &msg ):
+	m_msg(msg){}
+
+void DefaultBackgroundExceptionHandler::operator()( const std::exception_ptr &exp ) const{
+	try{
+		std::rethrow_exception(exp);
+	}
+	catch(const std::exception &ex){
+		std::cerr << m_msg << std::endl;
+		std::cerr << ex << std::endl;		
+	}
+}

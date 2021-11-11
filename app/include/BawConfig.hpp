@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 #include <filesystem>
 #include "config.h"
 
@@ -15,11 +16,18 @@ struct Config{
 	
 	constexpr static char application_name[] = "Buck Airwalker";
 	constexpr static char default_state_path[] = "baw_state.bin";
-	int threads = 1;
+
+	//Since we will be dealing with undelmited messages of unknown length, we need a timeout to decide when a reply has completed.
+	//This is in ms.
+	static constexpr unsigned long response_timeout = 10 * 1000;
+
+	std::string local_address; //local address to bind to, which will typically be the user's callsign, usually hyphenated
+	int threads = 1; 
 	std::filesystem::path state_path = default_state_path; 
 
 	Config(int argc, char *argv[]);
 	static void show_usage(int argc, char *argv[]);
+
 };
 
 }

@@ -6,18 +6,23 @@ using namespace std::string_literals;
 using namespace k3yab::bawns;
 
 void Config::show_usage(int argc, char *argv[]){
-	std::cout << "Usage: " << std::string(argv[0]) << " [--help | -h] [-j <no. of threads>] [-f state file path]" << std::endl << std::endl;
+	std::cout << "Usage: " << std::string(argv[0]) << " [--help | -h] [-j <no. of threads>] [-f state file path] <local node>" << std::endl << std::endl;
 	std::cout << "	--help, -h		This help" << std::endl;
 	std::cout << "	-j <count>		Max number of simultaneous parallel AX.25 connections" << std::endl;
 	std::cout << "	-f <path>		Path of state file to load and append node discoveries" << std::endl;
-	std::cout << "					defaults to '" << Config::default_state_path  << "'" << std::endl << std::endl;
+	std::cout << "					defaults to '" << Config::default_state_path  << "'" << std::endl;
+	std::cout << "	<local node>	Local address or callsign to use, typically the user's hyphenated callsign" << std::endl << std::endl;
 	std::cout << "On stdin, pipe or type a list of root nodes at which to begin querying, one callsign per line" << std::endl;
 	std::cout << std::endl;
 }
 
-static void demand_next(int argc, int &i, const std::string &msg){
-	if(++i >= argc)
+static void demand(int argc, int &i, const std::string &msg){
+	if(i >= argc)
 		throw ConfigError("Missing expected argument: " + msg);
+}
+
+static void demand_next(int argc, int &i, const std::string &msg){
+	demand( argc, ++i, msg );	
 }
 
 static int get_int(const char *arg){
@@ -64,7 +69,9 @@ static int process_switches(Config &conf, int argc, char *argv[]){
 }
 
 Config::Config( int argc, char *argv[]){
-	int i = process_switches( *this, argc, argv );
+	int i = process_switches( *this, argc, argv ); //non-positional switches
+	demand(argc, i, "Expected local address or callsign for binding client sockets");
+	local_address = argv[i++];
 	if(i < argc)
 		throw ConfigError("Unexpected argument: "s + argv[i]);
 }

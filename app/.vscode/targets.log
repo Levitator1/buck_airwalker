@@ -8,7 +8,7 @@ make: *** /home/j/project/buck_air_walker/app/build: No such file or directory. 
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Sat Oct 16 04:59:44 2021
+# Make data base, printed on Thu Nov 11 06:08:28 2021
 
 # Variables
 
@@ -17,7 +17,7 @@ GDK_BACKEND = x11
 # environment
 LC_ALL = C
 # environment
-VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-f78b05d2-21a9-475d-9af1-c7f28968f2e1.sock
+VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-fab89405-7be2-4a6c-a587-78a6233d0080.sock
 # environment
 VSCODE_CWD = /home/j
 # default
@@ -35,7 +35,7 @@ XDG_DATA_DIRS = /usr/local/share:/usr/share:/usr/share/gdm:/var/lib/menu-xdg:/us
 # environment
 VSCODE_LOG_STACK = false
 # environment
-VSCODE_CODE_CACHE_PATH = /home/j/.config/Code/CachedData/e7d7e9a9348e6a8cc8c03f877d39cb72e5dfb1ff
+VSCODE_CODE_CACHE_PATH = /home/j/.config/Code/CachedData/6cba118ac49a1b88332f312a8f67186f7f3c1643
 # environment
 XDG_SESSION_PATH = /org/freedesktop/DisplayManager/Session0
 # environment
@@ -49,11 +49,11 @@ VSCODE_PIPE_LOGGING = true
 # environment
 APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL = true
 # environment
-SSH_AUTH_SOCK = /tmp/ssh-9xs7OzqQ9iNl/agent.1395
+SSH_AUTH_SOCK = /tmp/ssh-w69531xQsNF4/agent.1539
 # default
 .SHELLFLAGS := -c
 # environment
-_LXSESSION_PID = 1395
+_LXSESSION_PID = 1539
 # environment
 XDG_CONFIG_DIRS = /etc/xdg
 # environment
@@ -63,7 +63,7 @@ XDG_SESSION_DESKTOP = lightdm-xsession
 # environment
 VSCODE_VERBOSE_LOGGING = true
 # environment
-VSCODE_PID = 1697
+VSCODE_PID = 2374
 # environment
 XDG_SESSION_TYPE = x11
 # environment
@@ -123,7 +123,7 @@ USER = j
 # environment
 GTK_MODULES = gail:atk-bridge
 # environment
-SSH_AGENT_PID = 1487
+SSH_AGENT_PID = 1649
 # environment
 _ = /usr/share/code/code
 # environment
@@ -135,20 +135,19 @@ XDG_SESSION_CLASS = user
 # environment
 VSCODE_AMD_ENTRYPOINT = vs/workbench/services/extensions/node/extensionHostProcess
 # environment
-PLATFORMIO_IDE = 2.3.3
+PLATFORMIO_IDE = 2.4.0
 # environment
 HOME = /home/j
 # environment
 ELECTRON_RUN_AS_NODE = 1
 # environment
-VSCODE_IPC_HOOK = /run/user/1000/vscode-d21a3b6f-1.60.0-main.sock
+VSCODE_IPC_HOOK = /run/user/1000/vscode-d21a3b6f-1.61.2-main.sock
 # environment
 MATHEMATICA_HOME = /opt/Wolfram/WolframEngine/12.3
 # environment
-XDG_SESSION_ID = 2
+XDG_SESSION_ID = 5
 # default
 .RECIPEPREFIX := 
- 
 # environment
 XDG_GREETER_DATA_DIR = /var/lib/lightdm/data/j
 # default
@@ -162,6 +161,7 @@ GDMSESSION = lightdm-xsession
 
 # Pattern-specific Variable Values
 
+ 
 # No pattern-specific variable values.
 
 # Directories
@@ -196,6 +196,6 @@ all:
 # strcache performance: lookups = 4 / hit rate = 25%
 # hash-table stats:
 # Load=3/8192=0%, Rehash=0, Collisions=0/4=0%
-# Finished Make data base on Sat Oct 16 04:59:44 2021
+# Finished Make data base on Thu Nov 11 06:08:28 2021
 
  

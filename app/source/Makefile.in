@@ -276,7 +276,7 @@ LIBUTIL_PATH = $(top_builddir)/../utillib/source/libutil.a
 baw_SOURCES = main.cpp baw.cpp BawConfig.cpp state_file.cpp
 baw_DEPENDENCIES = $(LIBUTIL_PATH)
 AM_CPPFLAGS = -std=c++2a -Wno-subobject-linkage -I$(srcdir)/../../utillib/include/ -I$(srcdir)/../include/ -I$(srcdir)/../
-LDADD = $(LIBUTIL_PATH) -lstdc++ -lpthread
+LDADD = $(LIBUTIL_PATH) -lstdc++ -lpthread -lax25
 all: all-am
 
 .SUFFIXES:
