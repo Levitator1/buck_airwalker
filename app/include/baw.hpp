@@ -24,7 +24,8 @@ public:
 	void run();
 	const bawns::Config &config() const;
 	bawns::state::StateFile &state();
-	const bawns::state::StateFile &state() const;	
+	const bawns::state::StateFile &state() const;
+	static void send_command( std::ostream &stream, const std::string &);
 };
 
 //A thread pool task that visits a node
@@ -49,8 +50,9 @@ class node_task{
 
 	//The KPC3P BBS appliance has a long-form J command which lists
 	//all known hosts and their via. 
-	//Presumably only the proximate host in the route is provided.
 	route_result_type try_j_l_command( std::iostream &stream );
+
+	bool bbs_mode( std::iostream &stream );
 
 public:
 	node_task(); //terminate worker thread

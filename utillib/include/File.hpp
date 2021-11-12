@@ -605,5 +605,26 @@ public:
 	}
 };
 
+//Seems kind of surprising that there is not an existing IO exception class
+class eof_exception : public std::ios_base::failure{
+	using base_type = std::ios_base::failure;
+
+public:
+	eof_exception( const std::string msg = "Unexpected end-of-file, EOF"):base_type(msg){}
+
+	template<typename Char, class Traits = std::char_traits<Char> >
+	static bool test( std::basic_ios<Char, Traits> &stream ){
+		return stream.eof();
+	}
+
+	template<typename Char, class Traits = std::char_traits<Char> >
+	static void check( std::basic_ios<Char, Traits> &stream ){
+		if( test(stream) ){
+			stream.clear( stream.rdstate() & ~std::ios_base::eofbit );
+			throw eof_exception();		
+		}
+	}
+};
+
 }
 }

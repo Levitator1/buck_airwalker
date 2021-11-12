@@ -19,7 +19,7 @@ struct Config{
 
 	//Since we will be dealing with undelmited messages of unknown length, we need a timeout to decide when a reply has completed.
 	//This is in ms.
-	static constexpr unsigned long response_timeout = 10 * 1000;
+	static constexpr unsigned long response_timeout = 15 * 1000;
 
 	std::string local_address; //local address to bind to, which will typically be the user's callsign, usually hyphenated
 	int threads = 1; 
